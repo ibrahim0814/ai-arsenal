@@ -10,7 +10,6 @@ import { getCurrentUser, isAdmin, signOut } from "../utils/auth";
 import { Button } from "@/components/ui/button";
 import { Plus, LogOut } from "lucide-react";
 import OpenAI from "openai";
-import * as cheerio from "cheerio";
 
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
@@ -69,7 +68,7 @@ export default function Home() {
       throw new Error("Only admins can add tools.");
     }
     try {
-      // Validate and fetch the webpage content
+      // Validate URL
       let url;
       try {
         url = new URL(link);
@@ -79,33 +78,29 @@ export default function Home() {
         );
       }
 
-      const response = await fetch(url.href);
+      // Fetch webpage content through our API route
+      const response = await fetch("/api/fetch-webpage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: url.href }),
+      });
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch the webpage: ${response.statusText}`);
-      }
-      const html = await response.text();
-
-      // Use cheerio to parse the HTML and extract relevant content
-      let $;
-      try {
-        const $ = cheerio.load(html);
-      } catch (err) {
-        console.log(err);
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch webpage");
       }
 
-      // Extract text content from relevant elements
-      const title = $("title").text().trim();
-      const metaDescription =
-        $('meta[name="description"]').attr("content")?.trim() || "";
-      const h1Text = $("h1").text().trim();
-      const mainContent = ($("main").text() || $("body").text()).trim();
+      const { title, metaDescription, h1Text, mainContent } =
+        await response.json();
 
       // Prepare content for AI processing
       const contentForAI = `
         Title: ${title}
         Description: ${metaDescription}
         Heading: ${h1Text}
-        Content: ${mainContent.substring(0, 1500)}
+        Content: ${mainContent}
       `.trim();
 
       // Generate summary using AI
@@ -114,7 +109,7 @@ export default function Home() {
           {
             role: "system",
             content:
-              "You are a tool that generates concise names and descriptions for AI tools and companies. Respond with exactly two lines: first line is the name, second line is a brief description focusing on the tool's main purpose and features.",
+              "You are a tool that generates concise names and descriptions for AI tools and companies. Respond with exactly two lines: first line should be just the tool/company name without any prefix, second line is a brief description focusing on the tool's main purpose and features. Be as specific as possible about what features the tool has and don't include any marketing language.",
           },
           {
             role: "user",

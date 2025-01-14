@@ -64,7 +64,9 @@ export function AddToolModal({
               </Label>
               <Input
                 id="link"
-                type="url"
+                type="text"
+                pattern="^(https?:\/\/)?[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$"
+                placeholder="https://example.com"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
                 className="col-span-3"
