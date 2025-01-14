@@ -161,7 +161,7 @@ export function AddToolModal({
               {isSubmitting
                 ? isManual
                   ? "Adding Tool..."
-                  : "Adding and Generating Description..."
+                  : "Adding + Generating Description..."
                 : "Add Tool"}
             </Button>
           </DialogFooter>
