@@ -65,6 +65,7 @@ export default function Home() {
 
   async function addTool(
     link: string,
+    is_personal_tool: boolean,
     manualData?: { title: string; description: string }
   ) {
     if (!isUserAdmin) {
@@ -151,27 +152,25 @@ export default function Home() {
       }
 
       // Add tool to database
-      const { data: toolData, error: dbError } = await fetchWithRetry(
+      const { data: newTool, error: insertError } = await fetchWithRetry(
         async () =>
-          await supabase
-            .from("tools")
-            .insert([
-              {
-                title,
-                link,
-                description,
-              },
-            ])
-            .select()
+          await supabase.from("tools").insert([
+            {
+              title,
+              link: url.href,
+              description,
+              is_personal_tool,
+            },
+          ]).select()
       );
 
-      if (dbError) {
-        console.error("Database error:", dbError);
-        throw new Error(dbError.message || "Failed to add tool to database");
+      if (insertError) {
+        console.error("Database error:", insertError);
+        throw new Error(insertError.message || "Failed to add tool to database");
       }
 
-      if (toolData) {
-        setTools([toolData[0], ...tools]);
+      if (newTool) {
+        setTools([newTool[0], ...tools]);
       } else {
         throw new Error("No data returned from database insertion");
       }
@@ -185,31 +184,31 @@ export default function Home() {
     id: string,
     title: string,
     link: string,
-    description: string
+    description: string,
+    is_personal_tool: boolean
   ) {
-    if (!isUserAdmin) {
-      setError("Only admins can edit tools.");
-      return;
-    }
     try {
-      const { data, error } = await fetchWithRetry(
-        async () =>
-          await supabase
-            .from("tools")
-            .update({ title, link, description })
-            .eq("id", id)
-            .select()
+      const { data, error } = await supabase
+        .from("tools")
+        .update({
+          title,
+          link,
+          description,
+          is_personal_tool,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update the tools state with the edited tool
+      setTools((prevTools) =>
+        prevTools.map((tool) =>
+          tool.id === id
+            ? { ...tool, title, link, description, is_personal_tool }
+            : tool
+        )
       );
-
-      if (error) {
-        console.error("Error details:", error);
-        throw error;
-      }
-
-      if (data) {
-        setTools(tools.map((tool) => (tool.id === id ? data[0] : tool)));
-      }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error editing tool:", error);
       throw error;
     }
@@ -263,11 +262,11 @@ export default function Home() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-8 pt-10 pb-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">AI Arsenal 🤖🛠️</h1>
-        <div className="space-x-2">
-          {isUserAdmin ? (
+        <h1 className="text-3xl font-bold flex items-center gap-2">AI Arsenal 🤖🛠️</h1>
+        <div className="flex gap-2">
+          {user ? (
             <>
               <Button onClick={() => setIsAddModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" /> Add Tool
@@ -277,13 +276,12 @@ export default function Home() {
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsLoginModalOpen(true)}>
-              Admin Login
-            </Button>
+            <Button onClick={() => setIsLoginModalOpen(true)}>Sign In</Button>
           )}
         </div>
       </div>
-      <ul className="space-y-4">
+
+      <div>
         {tools.map((tool) => (
           <ToolItem
             key={tool.id}
@@ -293,7 +291,8 @@ export default function Home() {
             isAdmin={isUserAdmin}
           />
         ))}
-      </ul>
+      </div>
+
       <AddToolModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -307,6 +306,6 @@ export default function Home() {
           checkUser();
         }}
       />
-    </div>
+    </main>
   );
 }

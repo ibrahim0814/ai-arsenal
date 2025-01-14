@@ -20,7 +20,11 @@ interface AddToolModalProps {
   onClose: () => void;
   onAddTool: (
     link: string,
-    manualData?: { title: string; description: string }
+    is_personal_tool: boolean,
+    manualData?: { 
+      title: string; 
+      description: string; 
+    }
   ) => Promise<void>;
 }
 
@@ -33,6 +37,7 @@ export function AddToolModal({
   const [isManual, setIsManual] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
   const [manualDescription, setManualDescription] = useState("");
+  const [isPersonalTool, setIsPersonalTool] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +54,12 @@ export function AddToolModal({
         }
         await onAddTool(
           link,
+          isPersonalTool,
           isManual
-            ? { title: manualTitle, description: manualDescription }
+            ? {
+                title: manualTitle,
+                description: manualDescription
+              }
             : undefined
         );
         setLink("");
@@ -90,6 +99,14 @@ export function AddToolModal({
                 checked={isManual}
                 onCheckedChange={setIsManual}
               />
+            </div>
+            <div className="flex items-center space-x-4">
+              <Switch
+                id="personal-tool"
+                checked={isPersonalTool}
+                onCheckedChange={setIsPersonalTool}
+              />
+              <Label htmlFor="personal-tool">Add to Current Stack</Label>
             </div>
 
             {isManual ? (

@@ -4,5 +4,5 @@ export interface Tool {
   link: string
   description: string
   created_at: string
+  is_personal_tool: boolean
 }
-
