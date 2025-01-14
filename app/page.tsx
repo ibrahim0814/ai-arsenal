@@ -63,7 +63,10 @@ export default function Home() {
     }
   }
 
-  async function addTool(link: string) {
+  async function addTool(
+    link: string,
+    manualData?: { title: string; description: string }
+  ) {
     if (!isUserAdmin) {
       throw new Error("Only admins can add tools.");
     }
@@ -78,58 +81,73 @@ export default function Home() {
         );
       }
 
-      // Fetch webpage content through our API route
-      const response = await fetch("/api/fetch-webpage", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: url.href }),
-      });
+      let title: string;
+      let description: string;
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to fetch webpage");
-      }
+      if (manualData) {
+        // Use manual data directly
+        title = manualData.title;
+        description = manualData.description;
+      } else {
+        // Fetch webpage content and generate AI description only if not manual
+        const response = await fetch("/api/fetch-webpage", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: url.href }),
+        });
 
-      const { title, metaDescription, h1Text, mainContent } =
-        await response.json();
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to fetch webpage");
+        }
 
-      // Prepare content for AI processing
-      const contentForAI = `
-        Title: ${title}
+        const {
+          title: pageTitle,
+          metaDescription,
+          h1Text,
+          mainContent,
+        } = await response.json();
+
+        // Prepare content for AI processing
+        const contentForAI = `
+        Title: ${pageTitle}
         Description: ${metaDescription}
         Heading: ${h1Text}
         Content: ${mainContent}
       `.trim();
 
-      // Generate summary using AI
-      const completion = await openai.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a tool that generates concise names and descriptions for AI tools and companies. Respond with exactly two lines: first line should be just the tool/company name without any prefix, second line is a brief description focusing on the tool's main purpose and features. Be as specific as possible about what features the tool has and don't include any marketing language.",
-          },
-          {
-            role: "user",
-            content: `Based on this webpage content, grab the name of the company and write a brief description:\n\n${contentForAI}`,
-          },
-        ],
-        model: "gpt-3.5-turbo",
-        max_tokens: 100,
-        temperature: 0.7,
-      });
+        // Generate summary using AI
+        const completion = await openai.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a tool that generates concise names and descriptions for AI tools and companies. Respond with exactly two lines: first line should be just the tool/company name without any prefix, second line is a brief description focusing on the tool's main purpose and features. Be as specific as possible about what features the tool has and don't include any marketing language.",
+            },
+            {
+              role: "user",
+              content: `Based on this webpage content, grab the name of the company and write a brief description:\n\n${contentForAI}`,
+            },
+          ],
+          model: "gpt-3.5-turbo",
+          max_tokens: 100,
+          temperature: 0.7,
+        });
 
-      const generatedText = completion.choices[0]?.message?.content || "";
-      const [name, ...descriptionParts] = generatedText
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const description = descriptionParts.join(" ").trim();
+        const generatedText = completion.choices[0]?.message?.content || "";
+        const [name, ...descriptionParts] = generatedText
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
 
-      if (!name || !description) {
-        throw new Error("Failed to generate name or description");
+        title = name;
+        description = descriptionParts.join(" ").trim();
+
+        if (!title || !description) {
+          throw new Error("Failed to generate name or description");
+        }
       }
 
       // Add tool to database
@@ -139,9 +157,9 @@ export default function Home() {
             .from("tools")
             .insert([
               {
-                title: name,
+                title,
                 link,
-                description: description,
+                description,
               },
             ])
             .select()
