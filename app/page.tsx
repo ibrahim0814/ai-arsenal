@@ -276,7 +276,7 @@ export default function Home() {
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsLoginModalOpen(true)}>Sign In</Button>
+            <Button onClick={() => setIsLoginModalOpen(true)}>Admin Login</Button>
           )}
         </div>
       </div>
