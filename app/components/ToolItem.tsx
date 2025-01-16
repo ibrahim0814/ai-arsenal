@@ -6,7 +6,7 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { EditToolModal } from "./EditToolModal";
 import { Badge } from "@/components/ui/badge";
 import { TAG_OPTIONS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatTagLabel } from "@/lib/utils";
 
 interface ToolItemProps {
   tool: Tool;
@@ -53,19 +53,15 @@ export default function ToolItem({
             </p>
           )}
           <div className="flex gap-1.5 flex-wrap">
-            {tool.tags?.map((tag) => {
-              const tagOption = TAG_OPTIONS.find(
-                (option) => option.value.toLowerCase() === tag.toLowerCase()
-              );
-              return (
-                <span
-                  key={tag}
-                  className="bg-gray-100 text-gray-900 px-2 py-1 rounded-lg text-xs font-medium inline-flex items-center"
-                >
-                  {tagOption?.label || tag}
-                </span>
-              );
-            })}
+            {tool.tags?.map((tag) => (
+              <Badge
+                key={tag}
+                variant="secondary"
+                className="text-xs bg-gray-100 text-gray-800"
+              >
+                {formatTagLabel(tag)}
+              </Badge>
+            ))}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">

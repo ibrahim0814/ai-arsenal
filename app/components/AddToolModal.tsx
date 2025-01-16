@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatTagLabel } from "@/lib/utils";
 
 interface AddToolModalProps {
   isOpen: boolean;
@@ -46,6 +46,12 @@ interface AddToolModalProps {
   ) => Promise<void>;
 }
 
+interface TagOption {
+  value: string;
+  label: string;
+  color: string;
+}
+
 export function AddToolModal({
   isOpen,
   onClose,
@@ -56,9 +62,11 @@ export function AddToolModal({
   const [manualTitle, setManualTitle] = useState("");
   const [manualDescription, setManualDescription] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagOption[]>(TAG_OPTIONS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPersonalTool, setIsPersonalTool] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,9 +75,62 @@ export function AddToolModal({
       setManualTitle("");
       setManualDescription("");
       setSelectedTags([]);
+      setAvailableTags(TAG_OPTIONS);
       setError(null);
+      setIsPersonalTool(false);
     }
   }, [isOpen]);
+
+  const generateDescription = async (url: string) => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/generate-description", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: url }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate description");
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setManualTitle(data.title || "");
+      setManualDescription(data.description || "");
+
+      // Update available and selected tags
+      if (data.tags && Array.isArray(data.tags)) {
+        const newTags = data.tags.filter(
+          (tag: TagOption) =>
+            !TAG_OPTIONS.some((t: TagOption) => t.value === tag.value)
+        );
+        setAvailableTags((prev) => [...TAG_OPTIONS, ...newTags]);
+        setSelectedTags(data.tags.map((t: TagOption) => t.value));
+      }
+    } catch (error: any) {
+      setError(error.message || "Failed to generate description");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Add effect to auto-generate when URL changes and not in manual mode
+  useEffect(() => {
+    if (link && !isManual) {
+      const timer = setTimeout(() => {
+        generateDescription(link);
+      }, 500); // Debounce for 500ms
+
+      return () => clearTimeout(timer);
+    }
+  }, [link]); // Only watch link changes, not isManual
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +171,7 @@ export function AddToolModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add New Tool</DialogTitle>
           <DialogDescription>
@@ -118,12 +179,98 @@ export function AddToolModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="tags" className="text-right">
-                Tags
-              </Label>
-              <div className="col-span-3">
+          <div className="grid gap-6 py-4">
+            {/* URL and Generation Controls */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="link" className="mb-2 block">
+                  URL
+                </Label>
+                <div className="flex gap-4 items-center">
+                  <Input
+                    id="link"
+                    type="text"
+                    pattern="^(https?:\/\/)?[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$"
+                    placeholder="https://example.com"
+                    value={link}
+                    onChange={(e) => setLink(e.target.value)}
+                    className="flex-1"
+                    required
+                  />
+                  <div className="flex items-center gap-2 min-w-fit">
+                    <Switch
+                      id="manual-mode"
+                      checked={isManual}
+                      onCheckedChange={setIsManual}
+                    />
+                    <Label
+                      htmlFor="manual-mode"
+                      className="text-sm text-muted-foreground whitespace-nowrap"
+                    >
+                      Manual
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Section */}
+            <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+              {!isManual ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Auto-generated Content
+                    </Label>
+                    {isGenerating && (
+                      <span className="text-sm text-muted-foreground animate-pulse">
+                        Generating...
+                      </span>
+                    )}
+                  </div>
+                  {manualTitle || manualDescription ? (
+                    <div className="space-y-2">
+                      <div className="font-medium">{manualTitle}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {manualDescription}
+                      </div>
+                    </div>
+                  ) : !isGenerating && link ? (
+                    <div className="text-sm text-muted-foreground">
+                      Enter a valid URL to auto-generate description and tags
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={manualTitle}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                      className="mt-1.5"
+                      required={isManual}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={manualDescription}
+                      onChange={(e) => setManualDescription(e.target.value)}
+                      className="mt-1.5"
+                      required={isManual}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tags and Settings */}
+            <div className="space-y-4">
+              <div>
+                <Label className="mb-2 block">Tags</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -137,13 +284,16 @@ export function AddToolModal({
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0">
+                  <PopoverContent
+                    className="w-[200px] p-0"
+                    style={{ overflowY: "auto" }}
+                  >
                     <Command>
                       <CommandInput placeholder="Search tags..." />
-                      <CommandList>
+                      <CommandList style={{ maxHeight: "300px" }}>
                         <CommandEmpty>No tags found.</CommandEmpty>
                         <CommandGroup>
-                          {TAG_OPTIONS.map((tagOption) => (
+                          {availableTags.map((tagOption) => (
                             <CommandItem
                               key={tagOption.value}
                               onSelect={() => {
@@ -162,7 +312,9 @@ export function AddToolModal({
                                     : "opacity-0"
                                 )}
                               />
-                              {tagOption.label}
+                              <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
+                                {formatTagLabel(tagOption.value)}
+                              </span>
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -172,121 +324,52 @@ export function AddToolModal({
                 </Popover>
                 {selectedTags.length > 0 && (
                   <div className="flex gap-1 flex-wrap mt-2">
-                    {selectedTags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="text-xs"
-                        onClick={() =>
-                          setSelectedTags((prev) =>
-                            prev.filter((t) => t !== tag)
-                          )
-                        }
-                      >
-                        {tag}
-                        <X className="ml-1 h-3 w-3" />
-                      </Badge>
-                    ))}
+                    {selectedTags.map((tag) => {
+                      const tagOption = availableTags.find(
+                        (t) => t.value === tag
+                      );
+                      return (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="text-xs bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          onClick={() =>
+                            setSelectedTags((prev) =>
+                              prev.filter((t) => t !== tag)
+                            )
+                          }
+                        >
+                          {formatTagLabel(tag)}
+                          <X className="ml-1 h-3 w-3" />
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="current-stack" className="text-right">
-                Current Stack
-              </Label>
-              <div className="col-span-3">
+              <div className="flex items-center space-x-2">
                 <Switch
                   id="current-stack"
                   checked={isPersonalTool}
                   onCheckedChange={setIsPersonalTool}
                 />
+                <Label htmlFor="current-stack">Add to Current Stack</Label>
               </div>
             </div>
-            <div className="flex items-center justify-between space-x-2">
-              <div className="flex flex-col space-y-1">
-                <Label htmlFor="manual-mode">Manual Input</Label>
-                <span className="text-sm text-muted-foreground">
-                  Override AI-generated content
-                </span>
-              </div>
-              <Switch
-                id="manual-mode"
-                checked={isManual}
-                onCheckedChange={setIsManual}
-              />
-            </div>
-            {isManual ? (
-              <>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="title" className="text-right">
-                    Title
-                  </Label>
-                  <Input
-                    id="title"
-                    value={manualTitle}
-                    onChange={(e) => setManualTitle(e.target.value)}
-                    className="col-span-3"
-                    required={isManual}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="link" className="text-right">
-                    URL
-                  </Label>
-                  <Input
-                    id="link"
-                    type="text"
-                    pattern="^(https?:\/\/)?[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$"
-                    placeholder="https://example.com"
-                    value={link}
-                    onChange={(e) => setLink(e.target.value)}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={manualDescription}
-                    onChange={(e) => setManualDescription(e.target.value)}
-                    className="col-span-3"
-                    required={isManual}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="link" className="text-right">
-                  URL
-                </Label>
-                <Input
-                  id="link"
-                  type="text"
-                  pattern="^(https?:\/\/)?[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$"
-                  placeholder="https://example.com"
-                  value={link}
-                  onChange={(e) => setLink(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-            )}
           </div>
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+          {error && (
+            <div className="mt-2 mb-4">
+              <p className="text-red-500 text-sm">{error}</p>
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? isManual
-                  ? "Adding Tool..."
-                  : "Adding plus Generating Description..."
-                : "Add Tool"}
+              {isSubmitting ? "Adding Tool..." : "Add Tool"}
             </Button>
           </DialogFooter>
         </form>
