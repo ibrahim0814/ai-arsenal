@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id         String   @id @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz
+  is_admin   Boolean  @default(false)
+
+  @@map("profiles")
+}
+
+model Tool {
+  id              BigInt   @id @default(autoincrement()) @db.BigInt
+  title           String
+  link            String
+  description     String
+  is_personal_tool Boolean @default(false)
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @default(now()) @db.Timestamptz
+  tags            String[] @default([])
+
+  @@map("tools")
+} 

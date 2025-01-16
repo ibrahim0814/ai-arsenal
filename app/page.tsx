@@ -9,12 +9,6 @@ import { supabase, fetchWithRetry } from "../utils/supabase";
 import { getCurrentUser, isAdmin, signOut } from "../utils/auth";
 import { Button } from "@/components/ui/button";
 import { Plus, LogOut } from "lucide-react";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
 
 export default function Home() {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -63,120 +57,78 @@ export default function Home() {
     }
   }
 
-  async function addTool(
+  async function handleAddTool(
     link: string,
-    is_personal_tool: boolean,
-    manualData?: { title: string; description: string }
+    title: string,
+    description: string,
+    tags: string[]
   ) {
-    if (!isUserAdmin) {
-      throw new Error("Only admins can add tools.");
-    }
     try {
-      // Validate URL
-      let url;
-      try {
-        url = new URL(link);
-      } catch (error) {
-        throw new Error(
-          "Invalid URL. Please enter a valid URL including the protocol (e.g., https://)."
-        );
-      }
-
-      let title: string;
-      let description: string;
-
-      if (manualData) {
-        // Use manual data directly
-        title = manualData.title;
-        description = manualData.description;
-      } else {
-        // Fetch webpage content and generate AI description only if not manual
-        const response = await fetch("/api/fetch-webpage", {
+      if (!title || !description) {
+        // First fetch webpage content
+        const webpageResponse = await fetch("/api/fetch-webpage", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ url: url.href }),
+          body: JSON.stringify({ url: link }),
         });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to fetch webpage");
+        if (!webpageResponse.ok) {
+          throw new Error("Failed to fetch webpage");
         }
 
-        const {
-          title: pageTitle,
-          metaDescription,
-          h1Text,
-          mainContent,
-        } = await response.json();
+        const webpageData = await webpageResponse.json();
 
-        // Prepare content for AI processing
-        const contentForAI = `
-        Title: ${pageTitle}
-        Description: ${metaDescription}
-        Heading: ${h1Text}
-        Content: ${mainContent}
-      `.trim();
-
-        // Generate summary using AI
-        const completion = await openai.chat.completions.create({
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a tool that generates concise names and descriptions for AI tools and companies. Respond with exactly two lines: first line should be just the tool/company name without any prefix, second line is a brief description focusing on the tool's main purpose and features. Be as specific as possible about what features the tool has and don't include any marketing language.",
-            },
-            {
-              role: "user",
-              content: `Based on this webpage content, grab the name of the company and write a brief description:\n\n${contentForAI}`,
-            },
-          ],
-          model: "gpt-3.5-turbo",
-          max_tokens: 100,
-          temperature: 0.7,
+        // Then generate description using the content
+        const generateResponse = await fetch("/api/generate-description", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: `
+              Title: ${webpageData.title}
+              Description: ${webpageData.metaDescription}
+              Heading: ${webpageData.h1Text}
+              Content: ${webpageData.mainContent}
+            `.trim(),
+          }),
         });
 
-        const generatedText = completion.choices[0]?.message?.content || "";
-        const [name, ...descriptionParts] = generatedText
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean);
-
-        title = name;
-        description = descriptionParts.join(" ").trim();
-
-        if (!title || !description) {
-          throw new Error("Failed to generate name or description");
+        if (!generateResponse.ok) {
+          throw new Error("Failed to generate description");
         }
+
+        const { title: generatedTitle, description: generatedDescription } =
+          await generateResponse.json();
+        title = generatedTitle;
+        description = generatedDescription;
       }
 
-      // Add tool to database
-      const { data: newTool, error: insertError } = await fetchWithRetry(
-        async () =>
-          await supabase.from("tools").insert([
-            {
-              title,
-              link: url.href,
-              description,
-              is_personal_tool,
-            },
-          ]).select()
-      );
+      const response = await fetch("/api/tools", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: link,
+          title,
+          description,
+          tags,
+        }),
+      });
 
-      if (insertError) {
-        console.error("Database error:", insertError);
-        throw new Error(insertError.message || "Failed to add tool to database");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Failed to create tool");
       }
 
-      if (newTool) {
-        setTools([newTool[0], ...tools]);
-      } else {
-        throw new Error("No data returned from database insertion");
-      }
+      setTools((prevTools) => [data, ...prevTools]);
     } catch (error: any) {
-      console.error("Error adding tool:", error);
-      throw new Error(error.message || "Failed to add tool. Please try again.");
+      console.error("Error in handleAddTool:", error);
+      throw new Error(error.message || "Failed to create tool");
     }
   }
 
@@ -185,7 +137,8 @@ export default function Home() {
     title: string,
     link: string,
     description: string,
-    is_personal_tool: boolean
+    tags: string[],
+    isPersonalTool: boolean
   ) {
     try {
       const { data, error } = await supabase
@@ -194,17 +147,24 @@ export default function Home() {
           title,
           link,
           description,
-          is_personal_tool,
+          tags,
+          is_personal_tool: isPersonalTool,
         })
         .eq("id", id);
 
       if (error) throw error;
 
-      // Update the tools state with the edited tool
       setTools((prevTools) =>
         prevTools.map((tool) =>
           tool.id === id
-            ? { ...tool, title, link, description, is_personal_tool }
+            ? {
+                ...tool,
+                title,
+                link,
+                description,
+                tags,
+                is_personal_tool: isPersonalTool,
+              }
             : tool
         )
       );
@@ -264,7 +224,9 @@ export default function Home() {
   return (
     <main className="container mx-auto px-8 pt-10 pb-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">AI Arsenal 🤖🛠️</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          AI Arsenal 🤖🛠️
+        </h1>
         <div className="flex gap-2">
           {user ? (
             <>
@@ -276,7 +238,9 @@ export default function Home() {
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsLoginModalOpen(true)}>Admin Login</Button>
+            <Button onClick={() => setIsLoginModalOpen(true)}>
+              Admin Login
+            </Button>
           )}
         </div>
       </div>
@@ -296,7 +260,7 @@ export default function Home() {
       <AddToolModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAddTool={addTool}
+        onAddTool={handleAddTool}
       />
       <LoginModal
         isOpen={isLoginModalOpen}
