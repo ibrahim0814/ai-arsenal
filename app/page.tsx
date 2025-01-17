@@ -61,7 +61,8 @@ export default function Home() {
     link: string,
     title: string,
     description: string,
-    tags: string[]
+    tags: string[],
+    isPersonalTool: boolean
   ) {
     try {
       if (!title || !description) {
@@ -116,6 +117,7 @@ export default function Home() {
           title,
           description,
           tags,
+          is_personal_tool: isPersonalTool,
         }),
       });
 

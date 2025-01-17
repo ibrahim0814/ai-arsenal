@@ -67,6 +67,7 @@ export function AddToolModal({
   const [error, setError] = useState<string | null>(null);
   const [isPersonalTool, setIsPersonalTool] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isValidUrl, setIsValidUrl] = useState(true);
 
   useEffect(() => {
     if (!isOpen) {
@@ -78,8 +79,35 @@ export function AddToolModal({
       setAvailableTags(TAG_OPTIONS);
       setError(null);
       setIsPersonalTool(false);
+      setIsValidUrl(true);
     }
   }, [isOpen]);
+
+  const validateUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return (
+        url === "" ||
+        /^https?:\/\/[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$/.test(url)
+      );
+    }
+  };
+
+  // Add effect for URL validation with debounce
+  useEffect(() => {
+    if (link === "") {
+      setIsValidUrl(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setIsValidUrl(validateUrl(link));
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timer);
+  }, [link]);
 
   const generateDescription = async (url: string) => {
     setIsGenerating(true);
@@ -123,14 +151,14 @@ export function AddToolModal({
 
   // Add effect to auto-generate when URL changes and not in manual mode
   useEffect(() => {
-    if (link && !isManual) {
+    if (link && !isManual && isValidUrl) {
       const timer = setTimeout(() => {
         generateDescription(link);
-      }, 500); // Debounce for 500ms
+      }, 1000); // 1 second debounce
 
       return () => clearTimeout(timer);
     }
-  }, [link]); // Only watch link changes, not isManual
+  }, [link, isValidUrl]); // Watch both link and validation state
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,7 +218,6 @@ export function AddToolModal({
                   <Input
                     id="link"
                     type="text"
-                    pattern="^(https?:\/\/)?[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$"
                     placeholder="https://example.com"
                     value={link}
                     onChange={(e) => setLink(e.target.value)}
@@ -211,6 +238,11 @@ export function AddToolModal({
                     </Label>
                   </div>
                 </div>
+                {!isValidUrl && link !== "" && !isGenerating && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Please enter a valid URL
+                  </p>
+                )}
               </div>
             </div>
 
@@ -235,7 +267,7 @@ export function AddToolModal({
                         {manualDescription}
                       </div>
                     </div>
-                  ) : !isGenerating && link ? (
+                  ) : !isGenerating && link && !isValidUrl ? (
                     <div className="text-sm text-muted-foreground">
                       Enter a valid URL to auto-generate description and tags
                     </div>
