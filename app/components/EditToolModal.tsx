@@ -90,40 +90,149 @@ export function EditToolModal({
     setIsGenerating(true);
     setError(null);
     try {
-      const response = await fetch("/api/generate-description", {
+      // First attempt with Cheerio + OpenAI
+      const response = await fetch("/api/fetch-webpage", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content: link }),
+        body: JSON.stringify({ url: link }),
       });
 
+      const data = await response.json();
+
+      // Check if we should retry with Perplexity
+      if (response.status === 422 && data.shouldRetryWithPerplexity) {
+        console.log("Retrying with Perplexity API...");
+        const perplexityResponse = await fetch("/api/generate-description", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: link,
+            metaDescription: "",
+            headings: "",
+            mainContent: "",
+            usePerplexity: true,
+          }),
+        });
+
+        if (!perplexityResponse.ok) {
+          throw new Error("Failed to generate content with Perplexity");
+        }
+
+        const perplexityData = await perplexityResponse.json();
+        if (perplexityData.error) {
+          throw new Error(perplexityData.error);
+        }
+
+        // Update fields with Perplexity response
+        setTitle(perplexityData.name || "");
+        setDescription(perplexityData.description || "");
+
+        if (perplexityData.tags && Array.isArray(perplexityData.tags)) {
+          const standardTags = TAG_OPTIONS.map((tag) => tag.value);
+
+          interface FormattedTag {
+            value: string;
+            label: string;
+            color: string;
+          }
+
+          const formattedTags = perplexityData.tags
+            .map(
+              (tag: string) =>
+                ({
+                  value: tag.toLowerCase().replace(/\s+/g, "-"),
+                  label: tag,
+                  color: "gray",
+                } as FormattedTag)
+            )
+            .filter(
+              (tag: FormattedTag) => tag.value && typeof tag.value === "string"
+            );
+
+          // Filter out any tags that already exist in TAG_OPTIONS
+          const newTags = formattedTags.filter(
+            (tag: FormattedTag) =>
+              !TAG_OPTIONS.some((t) => t.value === tag.value)
+          );
+
+          setAvailableTags([
+            ...standardTags,
+            ...formattedTags.map((t: FormattedTag) => t.value),
+          ]);
+          setSelectedTags(formattedTags.map((t: FormattedTag) => t.value));
+        }
+        return;
+      }
+
+      // If not retrying with Perplexity, handle the original response
       if (!response.ok) {
+        throw new Error("Failed to fetch webpage");
+      }
+
+      // Get description from OpenAI
+      const openaiResponse = await fetch("/api/generate-description", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: data.title,
+          metaDescription: data.metaDescription,
+          headings: data.headings,
+          mainContent: data.mainContent,
+          usePerplexity: false,
+        }),
+      });
+
+      if (!openaiResponse.ok) {
         throw new Error("Failed to generate content");
       }
 
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
+      const openaiData = await openaiResponse.json();
+      if (openaiData.error) {
+        throw new Error(openaiData.error);
       }
 
-      // Update all fields except link
-      setTitle(data.title || "");
-      setDescription(data.description || "");
+      // Update fields with the OpenAI response
+      setTitle(openaiData.name || "");
+      setDescription(openaiData.description || "");
 
-      if (data.tags && Array.isArray(data.tags)) {
+      if (openaiData.tags && Array.isArray(openaiData.tags)) {
         const standardTags = TAG_OPTIONS.map((tag) => tag.value);
-        const newTags = data.tags
-          .map((tag: string | TagResponse) =>
-            typeof tag === "object" ? tag.value : tag
+
+        interface FormattedTag {
+          value: string;
+          label: string;
+          color: string;
+        }
+
+        const formattedTags = openaiData.tags
+          .map(
+            (tag: string) =>
+              ({
+                value: tag.toLowerCase().replace(/\s+/g, "-"),
+                label: tag,
+                color: "gray",
+              } as FormattedTag)
           )
-          .filter((tag: string) => !standardTags.includes(tag));
-        setAvailableTags([...standardTags, ...newTags]);
-        setSelectedTags(
-          data.tags.map((tag: string | TagResponse) =>
-            typeof tag === "object" ? tag.value : tag
-          )
+          .filter(
+            (tag: FormattedTag) => tag.value && typeof tag.value === "string"
+          );
+
+        // Filter out any tags that already exist in TAG_OPTIONS
+        const newTags = formattedTags.filter(
+          (tag: FormattedTag) => !TAG_OPTIONS.some((t) => t.value === tag.value)
         );
+
+        setAvailableTags([
+          ...standardTags,
+          ...formattedTags.map((t: FormattedTag) => t.value),
+        ]);
+        setSelectedTags(formattedTags.map((t: FormattedTag) => t.value));
       }
     } catch (error: any) {
       setError(error.message || "Failed to generate content");
