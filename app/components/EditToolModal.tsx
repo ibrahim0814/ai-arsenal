@@ -95,7 +95,7 @@ export function EditToolModal({
         ? link
         : `https://${link}`;
 
-      // First attempt with Cheerio + OpenAI
+      // Try to fetch webpage content
       const response = await fetch("/api/fetch-webpage", {
         method: "POST",
         headers: {
@@ -104,91 +104,20 @@ export function EditToolModal({
         body: JSON.stringify({ url: urlWithProtocol }),
       });
 
-      const data = await response.json();
+      // Whether the fetch succeeds or fails, we'll try OpenAI
+      // If fetch succeeds, we'll pass the content. If it fails, we'll just pass the URL
+      const webData = response.ok ? await response.json() : null;
 
-      // Check if we should retry with Perplexity
-      if (response.status === 422 && data.shouldRetryWithPerplexity) {
-        console.log("Retrying with Perplexity API...");
-        const perplexityResponse = await fetch("/api/generate-description", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: link,
-            metaDescription: "",
-            headings: "",
-            mainContent: "",
-            usePerplexity: true,
-          }),
-        });
-
-        if (!perplexityResponse.ok) {
-          throw new Error("Failed to generate content with Perplexity");
-        }
-
-        const perplexityData = await perplexityResponse.json();
-        if (perplexityData.error) {
-          throw new Error(perplexityData.error);
-        }
-
-        // Update fields with Perplexity response
-        setTitle(perplexityData.name || "");
-        setDescription(perplexityData.description || "");
-
-        if (perplexityData.tags && Array.isArray(perplexityData.tags)) {
-          const standardTags = TAG_OPTIONS.map((tag) => tag.value);
-
-          interface FormattedTag {
-            value: string;
-            label: string;
-            color: string;
-          }
-
-          const formattedTags = perplexityData.tags
-            .map(
-              (tag: string) =>
-                ({
-                  value: tag.toLowerCase().replace(/\s+/g, "-"),
-                  label: tag,
-                  color: "gray",
-                } as FormattedTag)
-            )
-            .filter(
-              (tag: FormattedTag) => tag.value && typeof tag.value === "string"
-            );
-
-          // Filter out any tags that already exist in TAG_OPTIONS
-          const newTags = formattedTags.filter(
-            (tag: FormattedTag) =>
-              !TAG_OPTIONS.some((t) => t.value === tag.value)
-          );
-
-          setAvailableTags([
-            ...standardTags,
-            ...formattedTags.map((t: FormattedTag) => t.value),
-          ]);
-          setSelectedTags(formattedTags.map((t: FormattedTag) => t.value));
-        }
-        return;
-      }
-
-      // If not retrying with Perplexity, handle the original response
-      if (!response.ok) {
-        throw new Error("Failed to fetch webpage");
-      }
-
-      // Get description from OpenAI
       const openaiResponse = await fetch("/api/generate-description", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: data.title,
-          metaDescription: data.metaDescription,
-          headings: data.headings,
-          mainContent: data.mainContent,
+          title: webData?.title || urlWithProtocol,
+          metaDescription: webData?.metaDescription || "",
+          headings: webData?.headings || "",
+          mainContent: webData?.mainContent || "",
           usePerplexity: false,
         }),
       });

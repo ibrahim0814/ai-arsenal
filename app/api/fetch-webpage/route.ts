@@ -68,15 +68,6 @@ export async function POST(req: Request) {
     const $ = cheerio.load(html);
     console.log("Successfully loaded HTML with cheerio");
 
-    // Remove script tags, style tags, and hidden elements
-    const removedElements = $(
-      'script, style, [style*="display:none"], [style*="display: none"], .hidden, [hidden]'
-    ).length;
-    console.log(`Removed ${removedElements} non-content elements`);
-    $(
-      'script, style, [style*="display:none"], [style*="display: none"], .hidden, [hidden]'
-    ).remove();
-
     // Extract title - try different sources
     const title =
       $("title").text().trim() ||
@@ -87,17 +78,32 @@ export async function POST(req: Request) {
     // Extract description - try different sources
     const metaDescription =
       $('meta[name="description"]').attr("content")?.trim() ||
-      $('meta[property="og:description"]').attr("content")?.trim();
+      $('meta[property="og:description"]').attr("content")?.trim() ||
+      $('meta[name="twitter:description"]').attr("content")?.trim();
     console.log("Extracted meta description:", metaDescription);
 
-    // Get all headings text
+    // If we have both title and meta description, that's enough to proceed
+    if (title && metaDescription) {
+      console.log("Found sufficient metadata to proceed");
+      return NextResponse.json({
+        title,
+        metaDescription,
+        headings: "",
+        mainContent: metaDescription, // Use meta description as fallback content
+      });
+    }
+
+    // Get all headings text before we modify the DOM
     const headings = $("h1, h2, h3")
       .map((_, el) => $(el).text().trim())
       .get()
       .join(" ");
     console.log(`Found ${$("h1, h2, h3").length} headings`);
 
-    // Get main content using various selectors
+    // Remove script and style tags only
+    $("script, style").remove();
+
+    // First try to get content from common article/main content areas
     const mainContentSelectors = [
       "main",
       "article",
@@ -106,51 +112,83 @@ export async function POST(req: Request) {
       ".main-content",
       ".content",
       ".article",
+      "#content",
+      ".post-content",
+      ".entry-content",
+      ".page-content",
     ];
 
     let mainContent = "";
     let usedSelector = null;
+
+    // Try each selector and keep the longest valid content
     for (const selector of mainContentSelectors) {
-      const content = $(selector).text().trim();
-      if (content.length > mainContent.length) {
-        mainContent = content;
-        usedSelector = selector;
+      const elements = $(selector);
+      elements.each((_, el) => {
+        const content = $(el).text().trim();
+        // Only use content if it's substantial (more than just navigation/headers)
+        if (content.length > 150 && content.length > mainContent.length) {
+          mainContent = content;
+          usedSelector = selector;
+        }
+      });
+    }
+
+    // If no main content found, try getting content from paragraphs and lists
+    if (!mainContent || mainContent.length < 200) {
+      console.log("No main content found, trying paragraphs and lists...");
+      const paragraphsAndLists = $("p, ul, ol")
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter((text) => text.length > 20) // Filter out very short texts
+        .join(" ");
+
+      if (paragraphsAndLists.length > mainContent.length) {
+        mainContent = paragraphsAndLists;
+        usedSelector = "p, ul, ol";
       }
     }
-    console.log(
-      usedSelector
-        ? `Found main content using selector: ${usedSelector} (${mainContent.length} chars)`
-        : "No main content found with primary selectors"
-    );
 
-    // If no main content found through selectors, get body content
-    if (!mainContent) {
+    // If still no good content, fall back to body content but be smarter about it
+    if (!mainContent || mainContent.length < 200) {
       console.log("Falling back to body content...");
-      // Get text from body but exclude navigation, footer, and sidebar areas
-      const removedSections = $(
-        'nav, header, footer, [role="navigation"], [role="banner"], [role="contentinfo"], .nav, .navigation, .footer, .sidebar'
-      ).length;
-      console.log(
-        `Removed ${removedSections} navigation/footer/sidebar sections`
-      );
-
+      // Remove obvious non-content areas
       $(
-        'nav, header, footer, [role="navigation"], [role="banner"], [role="contentinfo"], .nav, .navigation, .footer, .sidebar'
+        'nav, footer, [role="navigation"], [role="contentinfo"], .nav, .navigation, .footer'
       ).remove();
-      mainContent = $("body").text().trim();
-      console.log(
-        `Extracted ${mainContent.length} characters from body content`
-      );
+
+      // Get text from body sections that might have content
+      const bodyContent = $("body")
+        .find("div, section, article")
+        .map((_, el) => {
+          const $el = $(el);
+          const text = $el.text().trim();
+          // Only include sections with substantial content
+          return text.length > 100 ? text : "";
+        })
+        .get()
+        .filter(Boolean)
+        .join(" ");
+
+      if (bodyContent.length > 0) {
+        mainContent = bodyContent;
+        usedSelector = "body-sections";
+      }
     }
 
     // Clean up the content
     const cleanContent = mainContent
       .replace(/\s+/g, " ") // Replace multiple spaces with single space
       .replace(/\n+/g, " ") // Replace multiple newlines with space
+      .replace(/\t+/g, " ") // Replace tabs with space
       .trim();
 
     // Check if we have enough meaningful content
     if (!title || !cleanContent || cleanContent.length < 100) {
+      console.log("Insufficient content found:", {
+        titleLength: title?.length || 0,
+        contentLength: cleanContent.length,
+      });
       return NextResponse.json(
         {
           error: "Could not extract meaningful content from webpage",
@@ -177,6 +215,17 @@ export async function POST(req: Request) {
       headingsLength: headings?.length || 0,
       mainContentLength: result.mainContent?.length || 0,
     });
+
+    // At the end, before returning error:
+    if (title || metaDescription) {
+      console.log("Using partial metadata");
+      return NextResponse.json({
+        title: title || "",
+        metaDescription: metaDescription || "",
+        headings: "",
+        mainContent: metaDescription || "", // Use what we have
+      });
+    }
 
     return NextResponse.json(result);
   } catch (error: any) {

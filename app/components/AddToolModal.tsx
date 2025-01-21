@@ -68,6 +68,7 @@ export function AddToolModal({
   const [isPersonalTool, setIsPersonalTool] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -116,91 +117,27 @@ export function AddToolModal({
     setIsGenerating(true);
     setError(null);
     try {
-      // Add https:// if no protocol is specified
-      const urlWithProtocol = url.match(/^https?:\/\//)
-        ? url
-        : `https://${url}`;
+      setIsLoading(true);
 
-      // First attempt with Cheerio + OpenAI
+      // Try to fetch webpage content first
       const response = await fetch("/api/fetch-webpage", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: urlWithProtocol }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
       });
 
-      const data = await response.json();
+      // Whether the fetch succeeds or fails, we'll try OpenAI
+      // If fetch succeeds, we'll pass the content. If it fails, we'll just pass the URL
+      const webData = response.ok ? await response.json() : null;
 
-      // Check if we should retry with Perplexity
-      if (response.status === 422 && data.shouldRetryWithPerplexity) {
-        console.log("Retrying with Perplexity API...");
-        const perplexityResponse = await fetch("/api/generate-description", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: url,
-            metaDescription: "",
-            headings: "",
-            mainContent: "",
-            usePerplexity: true,
-          }),
-        });
-
-        if (!perplexityResponse.ok) {
-          throw new Error("Failed to generate description with Perplexity");
-        }
-
-        const perplexityData = await perplexityResponse.json();
-        if (perplexityData.error) {
-          throw new Error(perplexityData.error);
-        }
-
-        // Update fields with Perplexity response
-        setManualTitle(perplexityData.name || "");
-        setManualDescription(perplexityData.description || "");
-
-        // Update tags from Perplexity response
-        if (perplexityData.tags && Array.isArray(perplexityData.tags)) {
-          const formattedTags = perplexityData.tags
-            .map((tag: string) => ({
-              value: tag.toLowerCase().replace(/\s+/g, "-"),
-              label: tag,
-              color: "gray",
-            }))
-            .filter(
-              (tag: TagOption) => tag.value && typeof tag.value === "string"
-            );
-
-          // Filter out any tags that already exist in TAG_OPTIONS
-          const newTags = formattedTags.filter(
-            (tag: TagOption) => !TAG_OPTIONS.some((t) => t.value === tag.value)
-          );
-
-          setAvailableTags((prev) => [...TAG_OPTIONS, ...newTags]);
-          setSelectedTags(formattedTags.map((t: TagOption) => t.value));
-        }
-        return;
-      }
-
-      // If not retrying with Perplexity, handle the original response
-      if (!response.ok) {
-        throw new Error("Failed to fetch webpage");
-      }
-
-      // Get description from OpenAI
       const openaiResponse = await fetch("/api/generate-description", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: data.title,
-          metaDescription: data.metaDescription,
-          headings: data.headings,
-          mainContent: data.mainContent,
+          title: webData?.title || url,
+          metaDescription: webData?.metaDescription || "",
+          headings: webData?.headings || "",
+          mainContent: webData?.mainContent || "",
           usePerplexity: false,
         }),
       });
@@ -210,38 +147,12 @@ export function AddToolModal({
       }
 
       const openaiData = await openaiResponse.json();
-      if (openaiData.error) {
-        throw new Error(openaiData.error);
-      }
-
-      // Update fields with the OpenAI response
-      setManualTitle(openaiData.name || "");
-      setManualDescription(openaiData.description || "");
-
-      // Update available and selected tags
-      if (openaiData.tags && Array.isArray(openaiData.tags)) {
-        const formattedTags = openaiData.tags
-          .map((tag: string) => ({
-            value: tag.toLowerCase().replace(/\s+/g, "-"),
-            label: tag,
-            color: "gray",
-          }))
-          .filter(
-            (tag: TagOption) => tag.value && typeof tag.value === "string"
-          );
-
-        // Filter out any tags that already exist in TAG_OPTIONS
-        const newTags = formattedTags.filter(
-          (tag: TagOption) => !TAG_OPTIONS.some((t) => t.value === tag.value)
-        );
-
-        setAvailableTags((prev) => [...TAG_OPTIONS, ...newTags]);
-        setSelectedTags(formattedTags.map((t: TagOption) => t.value));
-      }
+      handleApiResponse(openaiData);
     } catch (error: any) {
       setError(error.message || "Failed to generate description");
     } finally {
       setIsGenerating(false);
+      setIsLoading(false);
     }
   };
 
@@ -290,6 +201,36 @@ export function AddToolModal({
       }
     } else {
       setError("Please enter a URL");
+    }
+  };
+
+  // Add helper function to handle API responses
+  const handleApiResponse = (data: any) => {
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    // Update fields with the response
+    setManualTitle(data.name || "");
+    setManualDescription(data.description || "");
+
+    // Update available and selected tags
+    if (data.tags && Array.isArray(data.tags)) {
+      const formattedTags = data.tags
+        .map((tag: string) => ({
+          value: tag.toLowerCase().replace(/\s+/g, "-"),
+          label: tag,
+          color: "gray",
+        }))
+        .filter((tag: TagOption) => tag.value && typeof tag.value === "string");
+
+      // Filter out any tags that already exist in TAG_OPTIONS
+      const newTags = formattedTags.filter(
+        (tag: TagOption) => !TAG_OPTIONS.some((t) => t.value === tag.value)
+      );
+
+      setAvailableTags((prev) => [...TAG_OPTIONS, ...newTags]);
+      setSelectedTags(formattedTags.map((t: TagOption) => t.value));
     }
   };
 
