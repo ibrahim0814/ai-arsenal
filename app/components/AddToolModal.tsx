@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { TAG_OPTIONS } from "@/lib/constants";
 import { Check, ChevronsUpDown, Wand2 } from "lucide-react";
 import {
