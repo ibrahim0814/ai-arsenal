@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         generatedInfo: {
           description: parsedContent.description,
           tags: parsedContent.tags,
-          category: "AI Tool", // Default category since we don't need it
+          category: "none", // Default category since we don't need it
         },
       };
 
