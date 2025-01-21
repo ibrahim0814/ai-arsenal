@@ -5,8 +5,7 @@ import { Trash2, Edit } from "lucide-react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { EditToolModal } from "./EditToolModal";
 import { Badge } from "@/components/ui/badge";
-import { TAG_OPTIONS } from "@/lib/constants";
-import { cn, formatTagLabel } from "@/lib/utils";
+import { formatTagLabel } from "@/lib/utils";
 
 interface ToolItemProps {
   tool: Tool;
