@@ -52,6 +52,12 @@ interface TagResponse {
   [key: string]: any;
 }
 
+interface TagOption {
+  value: string;
+  label: string;
+  color: string;
+}
+
 export function EditToolModal({
   isOpen,
   onClose,
@@ -67,6 +73,7 @@ export function EditToolModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingPerplexity, setIsGeneratingPerplexity] = useState(false);
 
   useEffect(() => {
     setTitle(tool.title);
@@ -90,18 +97,11 @@ export function EditToolModal({
     setIsGenerating(true);
     setError(null);
     try {
-      // Add https:// if no protocol is specified
-      const urlWithProtocol = link.match(/^https?:\/\//)
-        ? link
-        : `https://${link}`;
-
-      // Try to fetch webpage content
+      // Try to fetch webpage content first
       const response = await fetch("/api/fetch-webpage", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: urlWithProtocol }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: link }),
       });
 
       // Whether the fetch succeeds or fails, we'll try OpenAI
@@ -110,11 +110,9 @@ export function EditToolModal({
 
       const openaiResponse = await fetch("/api/generate-description", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: webData?.title || urlWithProtocol,
+          title: webData?.title || link,
           metaDescription: webData?.metaDescription || "",
           headings: webData?.headings || "",
           mainContent: webData?.mainContent || "",
@@ -123,7 +121,7 @@ export function EditToolModal({
       });
 
       if (!openaiResponse.ok) {
-        throw new Error("Failed to generate content");
+        throw new Error("Failed to generate description");
       }
 
       const openaiData = await openaiResponse.json();
@@ -136,42 +134,99 @@ export function EditToolModal({
       setDescription(openaiData.description || "");
 
       if (openaiData.tags && Array.isArray(openaiData.tags)) {
-        const standardTags = TAG_OPTIONS.map((tag) => tag.value);
-
-        interface FormattedTag {
-          value: string;
-          label: string;
-          color: string;
-        }
-
         const formattedTags = openaiData.tags
-          .map(
-            (tag: string) =>
-              ({
-                value: tag.toLowerCase().replace(/\s+/g, "-"),
-                label: tag,
-                color: "gray",
-              } as FormattedTag)
-          )
+          .map((tag: string) => ({
+            value: tag.toLowerCase().replace(/\s+/g, "-"),
+            label: tag,
+            color: "gray",
+          }))
           .filter(
-            (tag: FormattedTag) => tag.value && typeof tag.value === "string"
+            (tag: TagOption) => tag.value && typeof tag.value === "string"
           );
 
         // Filter out any tags that already exist in TAG_OPTIONS
         const newTags = formattedTags.filter(
-          (tag: FormattedTag) => !TAG_OPTIONS.some((t) => t.value === tag.value)
+          (tag: TagOption) => !TAG_OPTIONS.some((t) => t.value === tag.value)
         );
 
-        setAvailableTags([
-          ...standardTags,
-          ...formattedTags.map((t: FormattedTag) => t.value),
-        ]);
-        setSelectedTags(formattedTags.map((t: FormattedTag) => t.value));
+        // Convert tag objects to strings before setting state
+        const availableTagValues = [
+          ...TAG_OPTIONS.map((t: TagOption) => t.value),
+          ...newTags.map((t: TagOption) => t.value),
+        ];
+        setAvailableTags(availableTagValues);
+        setSelectedTags(formattedTags.map((t: TagOption) => t.value));
       }
     } catch (error: any) {
       setError(error.message || "Failed to generate content");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const generateWithPerplexity = async () => {
+    setIsGeneratingPerplexity(true);
+    setError(null);
+    try {
+      // Add https:// if no protocol is specified
+      const urlWithProtocol = link.match(/^https?:\/\//)
+        ? link
+        : `https://${link}`;
+
+      const response = await fetch("/api/fetch-and-describe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: urlWithProtocol }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate content with Perplexity");
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Update fields with Perplexity response
+      setTitle(data.webpageInfo?.title || data.name || "");
+      setDescription(data.generatedInfo?.description || data.description || "");
+
+      const tags = data.generatedInfo?.tags || data.tags;
+      if (tags && Array.isArray(tags)) {
+        const formattedTags = tags
+          .map((tag: any) => {
+            // Handle both string tags and object tags
+            const tagValue = typeof tag === "string" ? tag : tag.value;
+            return {
+              value: tagValue.toLowerCase().replace(/\s+/g, "-"),
+              label: tagValue,
+              color: "gray",
+            };
+          })
+          .filter(
+            (tag: TagOption) => tag.value && typeof tag.value === "string"
+          );
+
+        // Filter out any tags that already exist in TAG_OPTIONS
+        const newTags = formattedTags.filter(
+          (tag: TagOption) => !TAG_OPTIONS.some((t) => t.value === tag.value)
+        );
+
+        // Convert tag objects to strings before setting state
+        const availableTagValues = [
+          ...TAG_OPTIONS.map((t: TagOption) => t.value),
+          ...newTags.map((t: TagOption) => t.value),
+        ];
+        setAvailableTags(availableTagValues);
+        setSelectedTags(formattedTags.map((t: TagOption) => t.value));
+      }
+    } catch (error: any) {
+      setError(error.message || "Failed to generate content with Perplexity");
+    } finally {
+      setIsGeneratingPerplexity(false);
     }
   };
 
@@ -208,26 +263,26 @@ export function EditToolModal({
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 py-4">
             {/* URL Section */}
-            <div>
-              <Label htmlFor="link" className="mb-2 block">
+            <div className="space-y-2">
+              <Label htmlFor="link" className="block">
                 URL
               </Label>
-              <div className="flex gap-2 items-center">
-                <Input
-                  id="link"
-                  type="url"
-                  value={link}
-                  onChange={(e) => setLink(e.target.value)}
-                  className="flex-1"
-                  required
-                />
+              <Input
+                id="link"
+                type="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                className="w-full"
+                required
+              />
+              <div className="flex gap-2 mt-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={regenerateAll}
                   disabled={isGenerating || !link}
-                  className="h-9 px-3 whitespace-nowrap"
+                  className="flex-1 h-9"
                 >
                   <Wand2
                     className={cn(
@@ -235,35 +290,47 @@ export function EditToolModal({
                       isGenerating && "animate-spin"
                     )}
                   />
-                  Redo
+                  OpenAI
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={generateWithPerplexity}
+                  disabled={isGeneratingPerplexity || !link}
+                  className="flex-1 h-9"
+                >
+                  <Wand2
+                    className={cn(
+                      "h-3.5 w-3.5 mr-1.5",
+                      isGeneratingPerplexity && "animate-spin"
+                    )}
+                  />
+                  Perplexity
                 </Button>
               </div>
             </div>
 
-            {/* Content Section */}
-            <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-              <Label className="text-sm font-medium">Content</Label>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="mt-1.5"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="mt-1.5"
-                    rows={3}
-                  />
-                </div>
+            {/* Title and Description Section */}
+            <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
               </div>
             </div>
 

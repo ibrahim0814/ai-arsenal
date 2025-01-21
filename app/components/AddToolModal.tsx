@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { TAG_OPTIONS } from "@/lib/constants";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Wand2 } from "lucide-react";
 import {
   Command,
   CommandInput,
@@ -67,6 +67,7 @@ export function AddToolModal({
   const [error, setError] = useState<string | null>(null);
   const [isPersonalTool, setIsPersonalTool] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingPerplexity, setIsGeneratingPerplexity] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -153,6 +154,67 @@ export function AddToolModal({
     } finally {
       setIsGenerating(false);
       setIsLoading(false);
+    }
+  };
+
+  const generateWithPerplexity = async (url: string) => {
+    setIsGeneratingPerplexity(true);
+    setError(null);
+    try {
+      // Add https:// if no protocol is specified
+      const urlWithProtocol = url.match(/^https?:\/\//)
+        ? url
+        : `https://${url}`;
+
+      const response = await fetch("/api/fetch-and-describe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: urlWithProtocol }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate content with Perplexity");
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Update fields with Perplexity response
+      setManualTitle(data.webpageInfo?.title || data.name || "");
+      setManualDescription(
+        data.generatedInfo?.description || data.description || ""
+      );
+
+      const tags = data.generatedInfo?.tags || data.tags;
+      if (tags && Array.isArray(tags)) {
+        const formattedTags = tags
+          .map((tag: any) => {
+            // Handle both string tags and object tags
+            const tagValue = typeof tag === "string" ? tag : tag.value;
+            return {
+              value: tagValue.toLowerCase().replace(/\s+/g, "-"),
+              label: tagValue,
+              color: "gray",
+            };
+          })
+          .filter((tag: any) => tag.value && typeof tag.value === "string");
+
+        // Filter out any tags that already exist in TAG_OPTIONS
+        const newTags = formattedTags.filter(
+          (tag: any) => !TAG_OPTIONS.some((t) => t.value === tag.value)
+        );
+
+        setAvailableTags((prev) => [...TAG_OPTIONS, ...newTags]);
+        setSelectedTags(formattedTags.map((t: any) => t.value));
+      }
+    } catch (error: any) {
+      setError(error.message || "Failed to generate content with Perplexity");
+    } finally {
+      setIsGeneratingPerplexity(false);
     }
   };
 
@@ -247,21 +309,12 @@ export function AddToolModal({
           <div className="grid gap-6 py-4">
             {/* URL and Generation Controls */}
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="link" className="mb-2 block">
-                  URL
-                </Label>
-                <div className="flex gap-4 items-center">
-                  <Input
-                    id="link"
-                    type="text"
-                    placeholder="https://example.com"
-                    value={link}
-                    onChange={(e) => setLink(e.target.value)}
-                    className="flex-1"
-                    required
-                  />
-                  <div className="flex items-center gap-2 min-w-fit">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="link" className="text-sm font-medium">
+                    URL
+                  </Label>
+                  <div className="flex items-center gap-2">
                     <Switch
                       id="manual-mode"
                       checked={isManual}
@@ -275,11 +328,57 @@ export function AddToolModal({
                     </Label>
                   </div>
                 </div>
-                {!isValidUrl && link !== "" && !isGenerating && (
-                  <p className="text-sm text-red-500 mt-1">
-                    Please enter a valid URL
-                  </p>
-                )}
+                <Input
+                  id="link"
+                  type="text"
+                  placeholder="https://example.com"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  className="w-full"
+                  required
+                />
+                {!isValidUrl &&
+                  link !== "" &&
+                  !isGenerating &&
+                  !isGeneratingPerplexity && (
+                    <p className="text-sm text-red-500">
+                      Please enter a valid URL
+                    </p>
+                  )}
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateDescription(link)}
+                    disabled={isGenerating || !link || !isValidUrl}
+                    className="flex-1 h-9"
+                  >
+                    <Wand2
+                      className={cn(
+                        "h-3.5 w-3.5 mr-1.5",
+                        isGenerating && "animate-spin"
+                      )}
+                    />
+                    OpenAI
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateWithPerplexity(link)}
+                    disabled={isGeneratingPerplexity || !link || !isValidUrl}
+                    className="flex-1 h-9"
+                  >
+                    <Wand2
+                      className={cn(
+                        "h-3.5 w-3.5 mr-1.5",
+                        isGeneratingPerplexity && "animate-spin"
+                      )}
+                    />
+                    Perplexity
+                  </Button>
+                </div>
               </div>
             </div>
 
