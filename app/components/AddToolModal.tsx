@@ -84,14 +84,17 @@ export function AddToolModal({
   }, [isOpen]);
 
   const validateUrl = (url: string) => {
+    // If empty, it's valid (we'll handle this case elsewhere)
+    if (url === "") return true;
+
+    // Add https:// if no protocol is specified
+    const urlWithProtocol = url.match(/^https?:\/\//) ? url : `https://${url}`;
+
     try {
-      new URL(url);
+      new URL(urlWithProtocol);
       return true;
     } catch {
-      return (
-        url === "" ||
-        /^https?:\/\/[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$/.test(url)
-      );
+      return /^[\w\-\.]+(\.[\w\-\.]+)+[\/\w\-\.\/?=&%]*$/.test(url);
     }
   };
 
@@ -113,13 +116,18 @@ export function AddToolModal({
     setIsGenerating(true);
     setError(null);
     try {
+      // Add https:// if no protocol is specified
+      const urlWithProtocol = url.match(/^https?:\/\//)
+        ? url
+        : `https://${url}`;
+
       // First attempt with Cheerio + OpenAI
       const response = await fetch("/api/fetch-webpage", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: urlWithProtocol }),
       });
 
       const data = await response.json();

@@ -90,13 +90,18 @@ export function EditToolModal({
     setIsGenerating(true);
     setError(null);
     try {
+      // Add https:// if no protocol is specified
+      const urlWithProtocol = link.match(/^https?:\/\//)
+        ? link
+        : `https://${link}`;
+
       // First attempt with Cheerio + OpenAI
       const response = await fetch("/api/fetch-webpage", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url: link }),
+        body: JSON.stringify({ url: urlWithProtocol }),
       });
 
       const data = await response.json();

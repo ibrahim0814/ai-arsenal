@@ -22,53 +22,49 @@ export async function POST(req: Request) {
         usePerplexity,
       });
 
-      const perplexitySystemContent = `You are an AI expert analyzing tools and platforms. Your task is to identify if a given URL or tool has AI capabilities and provide a concise description and relevant tags. Focus only on AI/ML features and capabilities.
+      const perplexitySystemContent = `You are an expert at analyzing tools, platforms, and companies. Your task is to identify what a given URL or tool does and provide a concise description and relevant tags.
 
 IMPORTANT: You must respond with a raw JSON object only, no markdown formatting. The response must be parseable by JSON.parse().
 
 Response format:
 {
   "name": "ONLY the bare company/product name without ANY additional text",
-  "description": "One clear sentence about the AI capabilities (string)",
-  "tags": ["4-5 relevant AI-focused tags - aim for 5 whenever possible"]
+  "description": "One clear sentence about what the tool/company does (string)",
+  "tags": ["4-5 relevant tags - aim for 5 whenever possible"]
 }
 
 ABSOLUTELY CRITICAL FOR NAME FIELD:
 - Return ONLY the bare company/product name
 - IGNORE webpage titles, meta descriptions, and taglines completely
 - STRIP AWAY everything after any dash (-), colon (:), or pipe (|)
-- REMOVE any suffixes like "AI", "Platform", "App" unless they're part of the official name
+- REMOVE any suffixes like "Platform", "App" unless they're part of the official name
 - Look at the domain name (without .com/.ai/etc) if unsure
 
 Examples of correct name extraction:
 ✓ "Front - The Platform for Exceptional Customer Service at Scale" → "Front"
-✓ "Claude.ai | Your AI Assistant" → "Claude"
-✓ "Jasper - AI Writing Assistant" → "Jasper"
-✓ "Midjourney: The Future of AI Art" → "Midjourney"
-✓ "Anthropic: Safe & Ethical AI" → "Anthropic"
-✓ "ChatGPT - OpenAI" → "ChatGPT"
-✓ "OpenAI Platform | API Documentation" → "OpenAI"
-✓ "Synthesia | AI Video Creation Platform" → "Synthesia"
-✓ "Runway - Next-Generation AI Creative Tools" → "Runway"
-✓ "Hugging Face – The AI Community Building the Future" → "Hugging Face"
+✓ "Jasper - Writing Assistant" → "Jasper"
+✓ "Midjourney: The Future of Art" → "Midjourney"
+✓ "Anthropic: Safe & Ethical Technology" → "Anthropic"
+✓ "Synthesia | Video Creation Platform" → "Synthesia"
+✓ "Runway - Next-Generation Creative Tools" → "Runway"
+✓ "Hugging Face – The Community Building the Future" → "Hugging Face"
 
 WRONG examples (do not do this):
 ✗ "Front Platform"
-✗ "Claude AI"
-✗ "Jasper AI Writing"
+✗ "Jasper Writing"
 ✗ "Midjourney Art Platform"
-✗ "Anthropic AI"
+✗ "Anthropic Technology"
 
 Guidelines for tags:
 - IMPORTANT: Include 4-5 tags (prefer 5) that cover different aspects:
-  1. Core technology (e.g., "natural-language-processing", "computer-vision")
-  2. Primary use case (e.g., "ai-writing", "ai-image-editing")
-  3. Specific capabilities (e.g., "text-generation", "image-recognition")
-  4. Notable features (e.g., "gpt-4", "stable-diffusion")
-  5. Domain/Industry (e.g., "ai-research", "ai-development")
+  1. Core functionality (e.g., "automation", "communication")
+  2. Primary use case (e.g., "customer-service", "content-creation")
+  3. Specific features (e.g., "team-collaboration", "analytics")
+  4. Notable capabilities (e.g., "real-time", "cross-platform")
+  5. Domain/Industry (e.g., "productivity", "marketing")
 - Use lowercase with hyphens for tags only
 - Be specific and descriptive
-- Focus on AI/ML capabilities`;
+- Focus on the tool's main purpose and features`;
 
       const requestBody = {
         model: "llama-3.1-sonar-small-128k-online",
@@ -84,7 +80,7 @@ Guidelines for tags:
 URL: ${title || "N/A"}
 Description: ${metaDescription || "N/A"}
 
-Return a JSON object with the tool's name, a single clear sentence about its AI capabilities, and 4-5 relevant AI-focused tags.`,
+Return a JSON object with the tool's name, a single clear sentence about its capabilities, and 4-5 relevant tags.`,
           },
         ],
         temperature: 0.7,
@@ -195,44 +191,41 @@ Return a JSON object with the tool's name, a single clear sentence about its AI 
     }
 
     // Default OpenAI path
-    const systemMessage = `You are an AI expert analyzing tools and platforms. Your task is to identify if a given URL or tool has AI capabilities and provide a concise description and relevant tags. Focus only on AI/ML features and capabilities.
+    const systemMessage = `You are an expert at analyzing tools, platforms, and companies. Your task is to identify what a given URL or tool does and provide a concise description and relevant tags.
 
 Response format must be a valid JSON object with these fields:
 {
   "name": "ONLY the bare company/product name without ANY additional text",
-  "description": "One clear sentence about the AI capabilities (string)",
-  "tags": ["4-5 relevant AI-focused tags - aim for 5 whenever possible"]
+  "description": "One clear sentence about what the tool/company does (string)",
+  "tags": ["4-5 relevant tags - aim for 5 whenever possible"]
 }
 
 ABSOLUTELY CRITICAL FOR NAME FIELD:
 - Return ONLY the bare company/product name
 - IGNORE webpage titles, meta descriptions, and taglines completely
 - STRIP AWAY everything after any dash (-), colon (:), or pipe (|)
-- REMOVE any suffixes like "AI", "Platform", "App" unless they're part of the official name
+- REMOVE any suffixes like "Platform", "App" unless they're part of the official name
 - Look at the domain name (without .com/.ai/etc) if unsure
 
-WRONG examples (do not do this because these are too long and not bare company names):
-✓ "Front - The Platform for Exceptional Customer Service at Scale" should be "Front"
-✓ "Claude.ai | Your AI Assistant" should be "Claude"
-✓ "Jasper - AI Writing Assistant" should be "Jasper"
-✓ "Midjourney: The Future of AI Art" should be "Midjourney"
-✓ "Anthropic: Safe & Ethical AI" should be "Anthropic"
-✓ "ChatGPT - OpenAI" should be "ChatGPT"
-✓ "OpenAI Platform | API Documentation" should be "OpenAI"
-✓ "Synthesia | AI Video Creation Platform" should be "Synthesia"
-✓ "Runway - Next-Generation AI Creative Tools" should be "Runway"
-✓ "Hugging Face – The AI Community Building the Future" should be "Hugging Face"
+Examples of correct name extraction:
+✓ "Front - The Platform for Exceptional Customer Service at Scale" → "Front"
+✓ "Jasper - Writing Assistant" → "Jasper"
+✓ "Midjourney: The Future of Art" → "Midjourney"
+✓ "Anthropic: Safe & Ethical Technology" → "Anthropic"
+✓ "Synthesia | Video Creation Platform" → "Synthesia"
+✓ "Runway - Next-Generation Creative Tools" → "Runway"
+✓ "Hugging Face – The Community Building the Future" → "Hugging Face"
 
 Guidelines for tags:
 - IMPORTANT: Include 4-5 tags (prefer 5) that cover different aspects:
-  1. Core technology (e.g., "natural-language-processing", "computer-vision")
-  2. Primary use case (e.g., "ai-writing", "ai-image-editing")
-  3. Specific capabilities (e.g., "text-generation", "image-recognition")
-  4. Notable features (e.g., "gpt-4", "stable-diffusion")
-  5. Domain/Industry (e.g., "ai-research", "ai-development")
+  1. Core functionality (e.g., "automation", "communication")
+  2. Primary use case (e.g., "customer-service", "content-creation")
+  3. Specific features (e.g., "team-collaboration", "analytics")
+  4. Notable capabilities (e.g., "real-time", "cross-platform")
+  5. Domain/Industry (e.g., "productivity", "marketing")
 - Use lowercase with hyphens for tags only
 - Be specific and descriptive
-- Focus on AI/ML capabilities`;
+- Focus on the tool's main purpose and features`;
 
     const userMessage = `Analyze this tool based on the following content:
 
@@ -241,7 +234,7 @@ Meta Description: ${metaDescription || "N/A"}
 Headings: ${headings || "N/A"}
 Main Content: ${mainContent || "N/A"}
 
-Identify the tool's name, provide a single clear sentence about its AI capabilities, and list 4-5 relevant AI-focused tags.`;
+Identify the tool's name, provide a single clear sentence about its capabilities, and list 4-5 relevant tags.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",

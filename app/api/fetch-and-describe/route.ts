@@ -17,7 +17,7 @@ export async function POST(req: Request) {
           {
             role: "system",
             content:
-              "You are a JSON-only response API. Return ONLY a JSON object with the company name, a one-sentence description of what they do, and 3-5 relevant AI-related tags.",
+              "You are a JSON-only response API. Return ONLY a JSON object with the company name, a one-sentence description of what they do, and 3-5 relevant tags that describe their main features and purpose.",
           },
           {
             role: "user",
