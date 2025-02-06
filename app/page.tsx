@@ -226,9 +226,12 @@ export default function Home() {
   return (
     <main className="container mx-auto px-8 pt-10 pb-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          AI Arsenal 🤖🛠️
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            AI Arsenal 🤖🛠️
+          </h1>
+          <p className="text-gray-600 mt-1">Total Tools: {tools.length}</p>
+        </div>
         <div className="flex gap-2">
           {user ? (
             <>
