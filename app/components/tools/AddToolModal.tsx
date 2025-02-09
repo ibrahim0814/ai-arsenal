@@ -34,9 +34,9 @@ import { X } from "lucide-react";
 import { cn, formatTagLabel } from "@/lib/utils";
 
 interface AddToolModalProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
-  onAddTool: (
+  onAdd: (
     link: string,
     title: string,
     description: string,
@@ -51,11 +51,7 @@ interface TagOption {
   color: string;
 }
 
-export function AddToolModal({
-  isOpen,
-  onClose,
-  onAddTool,
-}: AddToolModalProps) {
+export function AddToolModal({ open, onClose, onAdd }: AddToolModalProps) {
   const [link, setLink] = useState("");
   const [isManual, setIsManual] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
@@ -71,7 +67,7 @@ export function AddToolModal({
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!open) {
       setLink("");
       setIsManual(false);
       setManualTitle("");
@@ -82,7 +78,7 @@ export function AddToolModal({
       setIsPersonalTool(false);
       setIsValidUrl(true);
     }
-  }, [isOpen]);
+  }, [open]);
 
   const validateUrl = (url: string) => {
     // If empty, it's valid (we'll handle this case elsewhere)
@@ -240,7 +236,7 @@ export function AddToolModal({
           );
         }
 
-        await onAddTool(
+        await onAdd(
           link,
           manualTitle,
           manualDescription,
@@ -296,7 +292,7 @@ export function AddToolModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add New Tool</DialogTitle>

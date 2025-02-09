@@ -1,39 +1,47 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { signIn } from '../../utils/auth'
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { signIn } from "../../utils/auth";
 
 interface LoginModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onLoginSuccess: () => void
+  open: boolean;
+  onClose: () => void;
+  onLoginSuccess?: () => void;
 }
 
-export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+export function LoginModal({ open, onClose, onLoginSuccess }: LoginModalProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
-    const { data, error } = await signIn(email, password)
-    setIsLoading(false)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    const { data, error } = await signIn(email, password);
+    setIsLoading(false);
     if (error) {
-      setError(error.message)
+      setError(error.message);
     } else {
-      onLoginSuccess()
+      onLoginSuccess?.();
+      onClose();
     }
-  }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Admin Login</DialogTitle>
@@ -76,12 +84,11 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Tool } from "../../types/tool";
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit } from "lucide-react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { EditToolModal } from "./EditToolModal";
 import { Badge } from "@/components/ui/badge";
 import { formatTagLabel } from "@/lib/utils";
+import { Tool } from "@/types/tool";
 
 interface ToolItemProps {
   tool: Tool;
@@ -35,7 +35,7 @@ export default function ToolItem({
   };
 
   return (
-    <div className="w-full border rounded-lg p-4 mb-4 bg-white relative">
+    <div className="w-full border rounded-lg p-4 bg-white relative">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <a

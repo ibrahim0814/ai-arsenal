@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Tool } from "../../types/tool";
+
 import { Check, ChevronsUpDown, X, Wand2 } from "lucide-react";
 import {
   Command,
@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn, formatTagLabel } from "@/lib/utils";
 import { TAG_OPTIONS } from "@/lib/constants";
+import { Tool } from "@/types/tool";
 
 interface EditToolModalProps {
   isOpen: boolean;
@@ -83,10 +84,9 @@ export function EditToolModal({
     setIsPersonalTool(tool.is_personal_tool);
     setError(null);
 
-    // Combine TAG_OPTIONS with any custom tags from the tool
     const standardTags = TAG_OPTIONS.map((tag) => tag.value);
     const customTags = (tool.tags || []).filter(
-      (tag) => !standardTags.includes(tag)
+      (tag: string) => !standardTags.includes(tag)
     );
     setAvailableTags([...standardTags, ...customTags]);
   }, [tool, isOpen]);
