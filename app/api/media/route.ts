@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const VALID_TYPES = ["article", "tweet", "youtube", "other"] as const;
+type MediaType = (typeof VALID_TYPES)[number];
+
+function detectMediaType(url: string): MediaType {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+
+    if (hostname === "twitter.com" || hostname === "x.com") {
+      return "tweet";
+    }
+
+    if (
+      hostname === "youtube.com" ||
+      hostname === "youtu.be" ||
+      hostname === "www.youtube.com"
+    ) {
+      return "youtube";
+    }
+
+    return "article";
+  } catch (error) {
+    return "other";
+  }
+}
+
 export async function GET() {
   try {
     const media = await prisma.mediaItem.findMany({
@@ -43,22 +69,29 @@ export async function POST(request: Request) {
       title,
       url,
       description,
-      type,
+      type: providedType,
       embedHtml,
       videoId: providedVideoId,
     } = await request.json();
 
     // Validate input
-    if (!title || !url || !type) {
+    if (!title || !url) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Extract video ID for YouTube URLs if not provided
+    // Detect media type from URL if not provided or validate provided type
+    const detectedType = detectMediaType(url);
+    const type =
+      providedType && VALID_TYPES.includes(providedType as MediaType)
+        ? providedType
+        : detectedType;
+
+    // Extract video ID for YouTube URLs
     let finalVideoId = providedVideoId;
-    if (type.toLowerCase() === "youtube" && !finalVideoId) {
+    if (type === "youtube" && !finalVideoId) {
       const urlObj = new URL(url);
       if (urlObj.searchParams.has("v")) {
         finalVideoId = urlObj.searchParams.get("v");
@@ -71,25 +104,12 @@ export async function POST(request: Request) {
       finalVideoId = finalVideoId?.split("&")[0];
     }
 
-    // Normalize type to lowercase
-    const validTypes = ["article", "tweet", "youtube", "other"];
-    const normalizedType = type.toLowerCase();
-
-    if (!validTypes.includes(normalizedType)) {
-      return NextResponse.json(
-        {
-          error: `Invalid type. Must be one of: article, tweet, youtube, other`,
-        },
-        { status: 400 }
-      );
-    }
-
     // Log the incoming data
     console.log("Creating media item with data:", {
       title,
       url,
       description,
-      type: normalizedType,
+      type,
       embedHtml,
       videoId: finalVideoId,
     });
@@ -99,7 +119,7 @@ export async function POST(request: Request) {
         title,
         url,
         description: description || title, // Use title as fallback description
-        type: normalizedType,
+        type,
         embed_html: embedHtml,
         video_id: finalVideoId,
         updated_at: new Date(),
