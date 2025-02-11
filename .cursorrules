@@ -1,0 +1,70 @@
+# Scratchpad
+
+## Current Task: Add Media Tab for AI-related Content
+
+### Requirements:
+
+- Add a new tab for AI-related articles, tweets, and media
+- Store media items with title, URL, type (article/tweet/other), and description
+- Allow admin to add/edit/delete media items
+- Display media items in a clean, organized way
+- Auto-detect content type from URL
+- Rich tweet embeds
+- Article summaries using AI
+
+### Implementation Steps:
+
+[X] Plan database schema and UI components
+[X] Create database table for media items
+[X] Create API endpoints for media CRUD operations
+[X] Add Media tab UI and components
+[X] Implement media item management functionality
+[X] Add auto-detection of content type
+[X] Add rich tweet embeds
+[X] Add article summarization
+
+### Database Schema (media_items):
+
+```sql
+create table media_items (
+  id uuid default uuid_generate_v4() primary key,
+  title text not null,
+  url text not null,
+  description text,
+  type text not null check (type in ('article', 'tweet', 'other')),
+  embed_html text, -- For storing tweet embed HTML
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Add RLS policies
+alter table media_items enable row level security;
+
+-- Allow anyone to read media items
+create policy "Media items are viewable by everyone"
+  on media_items for select
+  using (true);
+
+-- Allow only authenticated users to insert media items
+create policy "Authenticated users can insert media items"
+  on media_items for insert
+  with check (auth.role() = 'authenticated');
+
+-- Allow only authenticated users to update their media items
+create policy "Authenticated users can update media items"
+  on media_items for update
+  using (auth.role() = 'authenticated');
+
+-- Allow only authenticated users to delete their media items
+create policy "Authenticated users can delete media items"
+  on media_items for delete
+  using (auth.role() = 'authenticated');
+```
+
+### Components Created:
+
+1. MediaItem.tsx - Individual media item display with rich tweet embeds
+2. AddMediaModal.tsx - Simplified modal for URL input only
+3. DeleteMediaModal.tsx - Confirmation modal for deletion
+4. API routes for media items CRUD operations
+5. Process endpoint for auto-detecting and processing content

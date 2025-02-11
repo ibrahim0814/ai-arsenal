@@ -11,7 +11,7 @@ export const createServerClient = () => {
 
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      autoRefreshToken: false,
+      autoRefreshToken: true,
       persistSession: false,
       detectSessionInUrl: false,
       storage: {

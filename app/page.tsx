@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Tool } from "../types/tool";
 import { LoginModal } from "./components/LoginModal";
-import { supabase, fetchWithRetry } from "../utils/supabase-client";
 import { getCurrentUser, isAdmin, signOut } from "../utils/auth";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -17,12 +16,16 @@ import {
   ChevronUp,
   Check,
   Loader2,
+  Newspaper,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromptFormModal } from "./components/prompts/PromptFormModal";
 import { DeletePromptModal } from "./components/prompts/DeletePromptModal";
 import { AddToolModal } from "./components/tools/AddToolModal";
 import ToolItem from "./components/tools/ToolItem";
+import { AddMediaModal } from "./components/media/AddMediaModal";
+import { DeleteMediaModal } from "./components/media/DeleteMediaModal";
+import MediaItem from "./components/media/MediaItem";
 
 interface Prompt {
   id: string;
@@ -33,11 +36,25 @@ interface Prompt {
   updated_at: string;
 }
 
+interface MediaItem {
+  id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  type: "article" | "tweet" | "youtube" | "other";
+  embedHtml?: string;
+  created_at: string;
+}
+
 export default function Home() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
+    {}
+  );
   const [error, setError] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -51,11 +68,17 @@ export default function Home() {
     Record<string, boolean>
   >({});
   const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<MediaItem | null>(
+    null
+  );
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [isDeleteMediaModalOpen, setIsDeleteMediaModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTools();
     fetchPrompts();
+    fetchMediaItems();
     checkUser();
   }, []);
 
@@ -71,16 +94,11 @@ export default function Home() {
   async function fetchTools() {
     setLoading(true);
     try {
-      const { data, error } = await fetchWithRetry(
-        async () =>
-          await supabase
-            .from("tools")
-            .select("*")
-            .order("created_at", { ascending: false })
-      );
-
-      if (error) throw error;
-
+      const response = await fetch("/api/tools");
+      if (!response.ok) {
+        throw new Error("Failed to fetch tools");
+      }
+      const data = await response.json();
       setTools(data || []);
     } catch (error) {
       console.error("Error fetching tools:", error);
@@ -102,6 +120,19 @@ export default function Home() {
       setPrompts(data);
     } catch (error) {
       console.error("Error fetching prompts:", error);
+    }
+  }
+
+  async function fetchMediaItems() {
+    try {
+      const response = await fetch("/api/media");
+      if (!response.ok) {
+        throw new Error("Failed to fetch media items");
+      }
+      const data = await response.json();
+      setMediaItems(data);
+    } catch (error) {
+      console.error("Error fetching media items:", error);
     }
   }
 
@@ -191,21 +222,26 @@ export default function Home() {
     isPersonalTool: boolean
   ) {
     try {
-      const { data, error } = await supabase
-        .from("tools")
-        .update({
+      const response = await fetch(`/api/tools/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           title,
           link,
           description,
           tags,
           is_personal_tool: isPersonalTool,
-        })
-        .eq("id", id);
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Failed to update tool");
+      }
 
-      setTools((prevTools) =>
-        prevTools.map((tool) =>
+      setTools(
+        tools.map((tool) =>
           tool.id === id
             ? {
                 ...tool,
@@ -230,11 +266,13 @@ export default function Home() {
       return;
     }
     try {
-      const { error } = await fetchWithRetry(
-        async () => await supabase.from("tools").delete().eq("id", id)
-      );
+      const response = await fetch(`/api/tools/${id}`, {
+        method: "DELETE",
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Failed to delete tool");
+      }
 
       setTools(tools.filter((tool) => tool.id !== id));
     } catch (error) {
@@ -361,6 +399,116 @@ export default function Home() {
     }));
   };
 
+  async function handleAddMediaItem(
+    title: string,
+    url: string,
+    description: string,
+    type: string
+  ) {
+    setIsProcessing(true);
+    try {
+      // Add the media item with the processed data
+      const response = await fetch("/api/media", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url,
+          title,
+          description,
+          type,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add media item");
+      }
+
+      setIsAddModalOpen(false);
+      await fetchMediaItems();
+    } catch (error: any) {
+      console.error("Error in handleAddMediaItem:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add media item",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleEditMediaItem(
+    title: string,
+    url: string,
+    description: string,
+    type: string
+  ) {
+    if (!selectedMediaItem) return;
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch(`/api/media/${selectedMediaItem.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          url,
+          description,
+          type,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update media item");
+      }
+
+      setIsMediaModalOpen(false);
+      setSelectedMediaItem(null);
+      await fetchMediaItems();
+    } catch (error: any) {
+      console.error("Error updating media item:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update media item",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleDeleteMediaItem() {
+    if (!selectedMediaItem) return;
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch(`/api/media/${selectedMediaItem.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete media item");
+      }
+
+      setIsDeleteMediaModalOpen(false);
+      setSelectedMediaItem(null);
+      await fetchMediaItems();
+    } catch (error: any) {
+      console.error("Error deleting media item:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete media item",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   if (loading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
@@ -389,7 +537,9 @@ export default function Home() {
           <p className="text-gray-600 mt-1">
             {activeTab === "tools"
               ? `Total Tools: ${tools.length}`
-              : `Total Prompts: ${prompts.length}`}
+              : activeTab === "prompts"
+              ? `Total Prompts: ${prompts.length}`
+              : `Total Media Items: ${mediaItems.length}`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -407,8 +557,10 @@ export default function Home() {
                   </span>
                 ) : activeTab === "tools" ? (
                   "Add Tool"
-                ) : (
+                ) : activeTab === "prompts" ? (
                   "Add Prompt"
+                ) : (
+                  "Add Media Item"
                 )}
               </Button>
               <Button variant="outline" onClick={handleSignOut}>
@@ -436,6 +588,10 @@ export default function Home() {
           <TabsTrigger value="prompts">
             <FileText className="w-4 h-4 mr-2" />
             Prompts
+          </TabsTrigger>
+          <TabsTrigger value="media">
+            <Newspaper className="w-4 h-4 mr-2" />
+            Media
           </TabsTrigger>
         </TabsList>
 
@@ -474,13 +630,13 @@ export default function Home() {
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={isProcessing}
+                        disabled={processingIds[prompt.id]}
                         onClick={() => {
                           setSelectedPrompt(prompt);
                           setIsEditModalOpen(true);
                         }}
                       >
-                        {isProcessing ? (
+                        {processingIds[prompt.id] ? (
                           <span className="flex items-center">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Processing...
@@ -492,20 +648,12 @@ export default function Home() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={isProcessing}
                         onClick={() => {
                           setSelectedPrompt(prompt);
                           setIsDeleteModalOpen(true);
                         }}
                       >
-                        {isProcessing ? (
-                          <span className="flex items-center">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </span>
-                        ) : (
-                          "Delete"
-                        )}
+                        Delete
                       </Button>
                     </div>
                   )}
@@ -583,6 +731,27 @@ export default function Home() {
             </div>
           ))}
         </TabsContent>
+
+        <TabsContent value="media" className="grid grid-cols-1 gap-2">
+          {mediaItems.map((item) => (
+            <MediaItem
+              key={item.id}
+              item={item}
+              onEdit={(item) => {
+                setSelectedMediaItem(item);
+                setIsMediaModalOpen(true);
+              }}
+              onDelete={(id) => {
+                const item = mediaItems.find((i) => i.id === id);
+                if (item) {
+                  setSelectedMediaItem(item);
+                  setIsDeleteMediaModalOpen(true);
+                }
+              }}
+              isAdmin={isUserAdmin}
+            />
+          ))}
+        </TabsContent>
       </Tabs>
 
       <AddToolModal
@@ -595,6 +764,15 @@ export default function Home() {
         isOpen={isAddModalOpen && activeTab === "prompts"}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddPrompt}
+        mode="add"
+        isProcessing={isProcessing}
+      />
+
+      <AddMediaModal
+        isOpen={isAddModalOpen && activeTab === "media"}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddMediaItem}
+        initialData={null}
         mode="add"
         isProcessing={isProcessing}
       />
@@ -620,6 +798,32 @@ export default function Home() {
             }}
             onDelete={handleDeletePrompt}
             prompt={selectedPrompt}
+            isProcessing={isProcessing}
+          />
+        </>
+      )}
+
+      {selectedMediaItem && (
+        <>
+          <AddMediaModal
+            isOpen={isMediaModalOpen}
+            onClose={() => {
+              setIsMediaModalOpen(false);
+              setSelectedMediaItem(null);
+            }}
+            onSubmit={handleEditMediaItem}
+            initialData={selectedMediaItem}
+            mode="edit"
+            isProcessing={isProcessing}
+          />
+          <DeleteMediaModal
+            isOpen={isDeleteMediaModalOpen}
+            onClose={() => {
+              setIsDeleteMediaModalOpen(false);
+              setSelectedMediaItem(null);
+            }}
+            onDelete={handleDeleteMediaItem}
+            item={selectedMediaItem}
             isProcessing={isProcessing}
           />
         </>

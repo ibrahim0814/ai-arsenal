@@ -1,53 +1,63 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeTool } from "@/lib/utils";
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const body = await req.json();
-    const { url, title, description, tags, is_personal_tool } = body;
+    const tools = await prisma.tool.findMany({
+      orderBy: {
+        created_at: "desc",
+      },
+    });
 
-    // Validate input
+    // Convert BigInt IDs to strings for JSON serialization
+    const serializedTools = tools.map((tool) => ({
+      ...tool,
+      id: tool.id.toString(),
+    }));
+
+    return NextResponse.json(serializedTools);
+  } catch (error) {
+    console.error("Error fetching tools:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch tools" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const { url, title, description, tags, is_personal_tool } =
+      await request.json();
+
     if (!url || !title || !description) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Log the incoming data
-    console.log("Creating tool with data:", {
-      link: url,
-      title,
-      description,
-      tags,
-      is_personal_tool,
-    });
-
     const tool = await prisma.tool.create({
       data: {
-        link: url,
         title,
+        link: url, // Map url to link for database
         description,
         tags,
         is_personal_tool,
+        updated_at: new Date(),
       },
     });
 
-    // Log successful creation
-    console.log("Tool created successfully:", tool);
-
-    // Serialize the tool before sending response
-    const serializedTool = serializeTool(tool);
-    return Response.json(serializedTool);
-  } catch (error: any) {
-    // Log the detailed error
+    // Convert BigInt ID to string for JSON serialization
+    return NextResponse.json({
+      ...tool,
+      id: tool.id.toString(),
+    });
+  } catch (error) {
     console.error("Error creating tool:", error);
-
-    return Response.json(
-      {
-        error: "Failed to create tool",
-        details: error.message,
-      },
+    return NextResponse.json(
+      { error: "Failed to create tool" },
       { status: 500 }
     );
   }
