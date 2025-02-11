@@ -26,6 +26,7 @@ import ToolItem from "./components/tools/ToolItem";
 import { AddMediaModal } from "./components/media/AddMediaModal";
 import { DeleteMediaModal } from "./components/media/DeleteMediaModal";
 import MediaItem from "./components/media/MediaItem";
+import { MediaGrid } from "./components/media/MediaGrid";
 
 interface Prompt {
   id: string;
@@ -732,25 +733,23 @@ export default function Home() {
           ))}
         </TabsContent>
 
-        <TabsContent value="media" className="grid grid-cols-1 gap-2">
-          {mediaItems.map((item) => (
-            <MediaItem
-              key={item.id}
-              item={item}
-              onEdit={(item) => {
+        <TabsContent value="media">
+          <MediaGrid
+            items={mediaItems}
+            onEdit={(item) => {
+              setSelectedMediaItem(item);
+              setIsMediaModalOpen(true);
+            }}
+            onDelete={(id) => {
+              const item = mediaItems.find((i) => i.id === id);
+              if (item) {
                 setSelectedMediaItem(item);
-                setIsMediaModalOpen(true);
-              }}
-              onDelete={(id) => {
-                const item = mediaItems.find((i) => i.id === id);
-                if (item) {
-                  setSelectedMediaItem(item);
-                  setIsDeleteMediaModalOpen(true);
-                }
-              }}
-              isAdmin={isUserAdmin}
-            />
-          ))}
+                setIsDeleteMediaModalOpen(true);
+              }
+            }}
+            onReorder={setMediaItems}
+            isAdmin={isUserAdmin}
+          />
         </TabsContent>
       </Tabs>
 
