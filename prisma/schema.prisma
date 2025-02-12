@@ -60,4 +60,4 @@ model MediaItem {
   updated_at  DateTime @default(now()) @db.Timestamptz
 
   @@map("media_items")
-} 
+}

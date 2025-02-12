@@ -5,10 +5,19 @@ import {
   Newspaper,
   Twitter,
   Youtube,
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useState } from "react";
 import { Tweet } from "react-tweet";
 import YouTubeEmbed from "./YouTubeEmbed";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MediaItem {
   id: string;
@@ -34,6 +43,7 @@ export default function MediaItem({
   onDelete,
   isAdmin,
 }: MediaItemProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -48,59 +58,45 @@ export default function MediaItem({
     return url.split("/").pop()?.split("?")[0] || "";
   };
 
+  const renderActions = () => (
+    <div className="absolute top-2 right-2 z-10">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm hover:bg-white"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {isAdmin && (
+            <>
+              <DropdownMenuItem onClick={() => onEdit(item)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={() => onDelete(item.id)}
+              >
+                Delete
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
   if (item.type === "tweet") {
     return (
-      <div className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+      <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+        {renderActions()}
         <div className="p-4">
-          <div className="flex items-center justify-between text-gray-500 text-sm mb-4">
-            <div className="flex items-center gap-2">
-              <Twitter className="h-5 w-5" />
-              <span>X Post • Saved on {formatDate(item.created_at)}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(item.url, "_blank")}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Visit
-              </Button>
-              {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => onEdit(item)}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Edit"
-                    )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => onDelete(item.id)}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Delete"
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
+            <Twitter className="h-4 w-4" />
+            <span>X Post • {formatDate(item.created_at)}</span>
           </div>
           <div className="flex justify-center">
             <Tweet id={getTweetId(item.url)} />
@@ -112,59 +108,14 @@ export default function MediaItem({
 
   if (item.type === "youtube") {
     return (
-      <div className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+      <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+        {renderActions()}
         <div className="p-4">
-          <div className="flex items-center justify-between text-gray-500 text-sm mb-4">
-            <div className="flex items-center gap-2">
-              <Youtube className="h-5 w-5" />
-              <span>YouTube • Saved on {formatDate(item.created_at)}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(item.url, "_blank")}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Visit
-              </Button>
-              {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => onEdit(item)}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Edit"
-                    )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => onDelete(item.id)}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Delete"
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
+            <Youtube className="h-4 w-4" />
+            <span>YouTube • {formatDate(item.created_at)}</span>
           </div>
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full mb-3">
             {item.videoId ? (
               <YouTubeEmbed videoId={item.videoId} />
             ) : (
@@ -173,75 +124,60 @@ export default function MediaItem({
               </div>
             )}
           </div>
+          <div>
+            <h3 className="font-medium text-base">{item.title}</h3>
+            {item.description && (
+              <p className="text-gray-600 text-sm mt-2">{item.description}</p>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+    <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+      {renderActions()}
       <div className="p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between text-gray-500 text-sm">
-            <div className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5" />
-              <span>Article • Saved on {formatDate(item.created_at)}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(item.url, "_blank")}
+        <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
+          <Newspaper className="h-4 w-4" />
+          <span>Article • {formatDate(item.created_at)}</span>
+        </div>
+        <div>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-lg mb-2 hover:text-blue-600 hover:underline inline-block"
+          >
+            {item.title}
+          </a>
+          {item.description && (
+            <div className="mt-2">
+              <p
+                className={`text-gray-600 text-base leading-relaxed ${
+                  !isExpanded ? "line-clamp-4" : ""
+                }`}
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Visit
-              </Button>
-              {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => onEdit(item)}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Edit"
-                    )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={isProcessing}
-                    onClick={() => onDelete(item.id)}
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Delete"
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {item.title}
-            </h3>
-            {item.description && (
-              <p className="text-gray-600 text-sm leading-relaxed">
                 {item.description}
               </p>
-            )}
-          </div>
+              {item.description.split(" ").length > 50 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-8 text-gray-500 hover:text-gray-900"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                  )}
+                  {isExpanded ? "Show less" : "Read more"}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

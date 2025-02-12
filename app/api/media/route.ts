@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { load } from "cheerio";
 
 const VALID_TYPES = ["article", "tweet", "youtube", "other"] as const;
 type MediaType = (typeof VALID_TYPES)[number];
@@ -9,21 +10,93 @@ function detectMediaType(url: string): MediaType {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
 
-    if (hostname === "twitter.com" || hostname === "x.com") {
+    if (hostname.includes("twitter.com") || hostname.includes("x.com")) {
       return "tweet";
-    }
-
-    if (
-      hostname === "youtube.com" ||
-      hostname === "youtu.be" ||
-      hostname === "www.youtube.com"
+    } else if (
+      hostname.includes("youtube.com") ||
+      hostname.includes("youtu.be")
     ) {
       return "youtube";
+    } else {
+      return "article";
+    }
+  } catch {
+    return "other";
+  }
+}
+
+async function generateSummary(
+  content: string,
+  type: MediaType,
+  title: string,
+  url: string
+): Promise<string> {
+  try {
+    // Import the LLM API
+    const { query_llm } = require("../../utils/llm");
+
+    let prompt = "";
+    switch (type) {
+      case "article":
+        prompt = `Summarize this article in 2-3 concise paragraphs. Focus on the key points and insights. Don't include any introductory phrases like "This article discusses" - just give the summary directly.\n\nTitle: ${title}\nContent: ${content}`;
+        break;
+      case "tweet":
+        prompt = `Explain the significance of this tweet in 1-2 sentences. Focus on the key message or insight.\n\nTweet: ${content}`;
+        break;
+      case "youtube":
+        prompt = `Summarize what this YouTube video is about in 2-3 sentences based on its title and description. Focus on the main topic and value proposition.\n\nTitle: ${title}\nDescription: ${content}`;
+        break;
+      default:
+        prompt = `Summarize this content in 2-3 sentences:\n\n${content}`;
     }
 
-    return "article";
+    const summary = await query_llm(prompt, "anthropic");
+    return summary.trim();
   } catch (error) {
-    return "other";
+    console.error("Error generating summary:", error);
+    // Fallback to content or title if summary generation fails
+    return content.length > 500 ? content.substring(0, 500) + "..." : content;
+  }
+}
+
+async function fetchAndSummarizeContent(
+  url: string,
+  type: MediaType
+): Promise<string> {
+  try {
+    const response = await fetch(url);
+    const html = await response.text();
+    const $ = load(html);
+
+    let content = "";
+    switch (type) {
+      case "article":
+        // Try to get the main content
+        content = $("article, main, .content, .post-content, .article-content")
+          .first()
+          .text()
+          .trim();
+        // Fallback to body if no main content found
+        if (!content) {
+          content = $("body").text().trim();
+        }
+        break;
+      case "tweet":
+        // For tweets, use the tweet text
+        content = $("[data-testid='tweetText']").text().trim();
+        break;
+      case "youtube":
+        // For YouTube, use the video description
+        content = $("meta[name='description']").attr("content") || "";
+        break;
+      default:
+        content = $("body").text().trim();
+    }
+
+    return await generateSummary(content, type, "", url);
+  } catch (error) {
+    console.error("Error fetching content:", error);
+    return ""; // Return empty string if fetching fails
   }
 }
 
@@ -104,36 +177,33 @@ export async function POST(request: Request) {
       finalVideoId = finalVideoId?.split("&")[0];
     }
 
-    // Log the incoming data
-    console.log("Creating media item with data:", {
-      title,
-      url,
-      description,
-      type,
-      embedHtml,
-      videoId: finalVideoId,
-    });
+    // Generate summary if no description provided
+    let finalDescription = description;
+    if (!finalDescription) {
+      const content = await fetchAndSummarizeContent(url, type as MediaType);
+      finalDescription = content;
+    }
+
+    // Create the media item with Pacific timezone
+    const now = new Date();
+    const pacificTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
 
     const mediaItem = await prisma.mediaItem.create({
       data: {
         title,
         url,
-        description: description || title, // Use title as fallback description
+        description: finalDescription,
         type,
         embed_html: embedHtml,
         video_id: finalVideoId,
-        updated_at: new Date(),
+        created_at: pacificTime,
+        updated_at: pacificTime,
       },
     });
 
-    // Log successful creation
-    console.log("Media item created successfully:", mediaItem);
-
     return NextResponse.json(mediaItem);
   } catch (error: any) {
-    // Log the detailed error
     console.error("Error creating media item:", error);
-
     return NextResponse.json(
       {
         error: "Failed to create media item",

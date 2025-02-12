@@ -7,66 +7,44 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { url, content } = await request.json();
+    const { content, type } = await request.json();
 
-    if (!url || !content) {
+    if (!content) {
       return NextResponse.json(
-        { error: "URL and content are required" },
+        { error: "Content is required" },
         { status: 400 }
       );
     }
 
-    const systemMessage = `You are an expert at analyzing and summarizing online content. Your task is to provide a comprehensive yet concise summary of the given article or content.
-
-Response format must be a valid JSON object with these fields:
-{
-  "title": "A clear, informative title that captures the main topic",
-  "summary": "A detailed 2-3 paragraph summary of the content's key points, main arguments, and important details. Make it comprehensive but clear and readable.",
-  "keyPoints": ["List of 3-5 key takeaways or main points from the content"],
-  "topics": ["List of 2-3 main topics or themes covered"]
-}
-
-Guidelines:
-- Title should be clear and descriptive
-- Summary should be thorough but accessible
-- Include specific details and examples when relevant
-- Maintain objectivity in the summary
-- Highlight the most important findings or conclusions
-- Identify the main themes or topics discussed`;
-
-    const userMessage = `Please analyze and summarize the following content:
-
-${content}
-
-URL Source: ${url}
-
-Provide a comprehensive summary including the main points, key arguments, and important details.`;
+    // Prepare the prompt based on content type
+    let prompt = "";
+    if (type === "article") {
+      prompt = `Please provide a clear and concise summary of the following article, focusing on the main points and key takeaways. Keep the summary informative but brief (2-3 paragraphs maximum):\n\n${content}`;
+    } else {
+      prompt = `Please provide a brief summary of the following content:\n\n${content}`;
+    }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: systemMessage },
-        { role: "user", content: userMessage },
+        {
+          role: "system",
+          content: "You are a helpful assistant that creates clear, accurate summaries of content. Focus on the main points and key takeaways."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
       ],
       temperature: 0.7,
-      max_tokens: 1000,
-      response_format: { type: "json_object" },
+      max_tokens: 500
     });
 
-    const response = completion.choices[0].message.content;
-    if (!response) {
-      throw new Error("No response from OpenAI");
-    }
+    const summary = completion.choices[0]?.message?.content?.trim() || "";
 
-    // Parse and validate the response
-    const parsedResponse = JSON.parse(response);
-    if (!parsedResponse.title || !parsedResponse.summary) {
-      throw new Error("Invalid response format from OpenAI");
-    }
-
-    return NextResponse.json(parsedResponse);
+    return NextResponse.json({ summary });
   } catch (error: any) {
-    console.error("Error in summarize:", error);
+    console.error("Error summarizing content:", error);
     return NextResponse.json(
       { error: error.message || "Failed to summarize content" },
       { status: 500 }
