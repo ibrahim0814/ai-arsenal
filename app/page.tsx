@@ -17,6 +17,9 @@ import {
   Check,
   Loader2,
   Newspaper,
+  LayoutGrid,
+  Twitter,
+  Youtube,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromptFormModal } from "./components/prompts/PromptFormModal";
@@ -27,6 +30,13 @@ import { AddMediaModal } from "./components/media/AddMediaModal";
 import { DeleteMediaModal } from "./components/media/DeleteMediaModal";
 import MediaItem from "./components/media/MediaItem";
 import { MediaGrid } from "./components/media/MediaGrid";
+import DailySummaryCard from "./components/media/DailySummaryCard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Prompt {
   id: string;
@@ -44,6 +54,7 @@ interface MediaItem {
   description: string | null;
   type: "article" | "tweet" | "youtube" | "other";
   embedHtml?: string;
+  videoId?: string;
   created_at: string;
 }
 
@@ -510,6 +521,36 @@ export default function Home() {
     }
   }
 
+  const groupMediaItemsByDate = (items: MediaItem[]) => {
+    const groups: { [key: string]: MediaItem[] } = {};
+
+    items.forEach((item) => {
+      const date = new Date(item.created_at);
+      // Convert to Pacific time for grouping
+      const pacificDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+      const dateKey = pacificDate.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles" }).split(",")[0];
+
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(item);
+    });
+
+    return Object.entries(groups)
+      .sort(([dateA], [dateB]) => {
+        const dateAObj = new Date(dateA);
+        const dateBObj = new Date(dateB);
+        return dateBObj.getTime() - dateAObj.getTime();
+      })
+      .map(([date, items]) => ({
+        date,
+        items: items.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
+      }));
+  };
+
   if (loading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
@@ -531,47 +572,50 @@ export default function Home() {
   return (
     <main className="container mx-auto px-8 pt-10 pb-6">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            AI Arsenal 🛠️
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {activeTab === "tools"
-              ? `Total Tools: ${tools.length}`
-              : activeTab === "prompts"
-              ? `Total Prompts: ${prompts.length}`
-              : `Total Media Items: ${mediaItems.length}`}
-          </p>
-        </div>
-        <div className="flex gap-2">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          AI Arsenal <span className="text-gray-400">⚔️</span>
+        </h1>
+        <div className="flex items-center gap-3">
+          {isUserAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  setActiveTab("tools");
+                  setIsAddModalOpen(true);
+                }}>
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Add Tool
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setActiveTab("prompts");
+                  setIsAddModalOpen(true);
+                }}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Add Prompt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setActiveTab("media");
+                  setIsAddModalOpen(true);
+                }}>
+                  <Newspaper className="h-4 w-4 mr-2" />
+                  Add Media
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {user ? (
-            <>
-              <Button
-                onClick={() => setIsAddModalOpen(true)}
-                disabled={isProcessing}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {isProcessing ? (
-                  <span className="flex items-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </span>
-                ) : activeTab === "tools" ? (
-                  "Add Tool"
-                ) : activeTab === "prompts" ? (
-                  "Add Prompt"
-                ) : (
-                  "Add Media Item"
-                )}
-              </Button>
-              <Button variant="outline" onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" /> Sign Out
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsLoginModalOpen(true)}>
-              Admin Login
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
+          ) : (
+            <Button onClick={() => setIsLoginModalOpen(true)}>Sign In</Button>
           )}
         </div>
       </div>
@@ -734,22 +778,89 @@ export default function Home() {
         </TabsContent>
 
         <TabsContent value="media">
-          <MediaGrid
-            items={mediaItems}
-            onEdit={(item) => {
-              setSelectedMediaItem(item);
-              setIsMediaModalOpen(true);
-            }}
-            onDelete={(id) => {
-              const item = mediaItems.find((i) => i.id === id);
-              if (item) {
-                setSelectedMediaItem(item);
-                setIsDeleteMediaModalOpen(true);
-              }
-            }}
-            onReorder={setMediaItems}
-            isAdmin={isUserAdmin}
-          />
+          <Tabs defaultValue="all" className="w-full">
+            <div className="mb-4">
+              <TabsList>
+                <TabsTrigger value="all" className="w-10">
+                  <LayoutGrid className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="article" className="w-10">
+                  <Newspaper className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="tweet" className="w-10">
+                  <Twitter className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="youtube" className="w-10">
+                  <Youtube className="h-4 w-4" />
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="all">
+              <div className="space-y-6">
+                {groupMediaItemsByDate(mediaItems).map(({ date, items }) => (
+                  <DailySummaryCard key={date} date={date} items={items} />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="article">
+              <MediaGrid
+                items={mediaItems.filter((item) => item.type === "article")}
+                onEdit={(item) => {
+                  setSelectedMediaItem(item);
+                  setIsMediaModalOpen(true);
+                }}
+                onDelete={(id) => {
+                  const item = mediaItems.find((i) => i.id === id);
+                  if (item) {
+                    setSelectedMediaItem(item);
+                    setIsDeleteMediaModalOpen(true);
+                  }
+                }}
+                onReorder={setMediaItems}
+                isAdmin={isUserAdmin}
+              />
+            </TabsContent>
+
+            <TabsContent value="tweet">
+              <MediaGrid
+                items={mediaItems.filter((item) => item.type === "tweet")}
+                onEdit={(item) => {
+                  setSelectedMediaItem(item);
+                  setIsMediaModalOpen(true);
+                }}
+                onDelete={(id) => {
+                  const item = mediaItems.find((i) => i.id === id);
+                  if (item) {
+                    setSelectedMediaItem(item);
+                    setIsDeleteMediaModalOpen(true);
+                  }
+                }}
+                onReorder={setMediaItems}
+                isAdmin={isUserAdmin}
+              />
+            </TabsContent>
+
+            <TabsContent value="youtube">
+              <MediaGrid
+                items={mediaItems.filter((item) => item.type === "youtube")}
+                onEdit={(item) => {
+                  setSelectedMediaItem(item);
+                  setIsMediaModalOpen(true);
+                }}
+                onDelete={(id) => {
+                  const item = mediaItems.find((i) => i.id === id);
+                  if (item) {
+                    setSelectedMediaItem(item);
+                    setIsDeleteMediaModalOpen(true);
+                  }
+                }}
+                onReorder={setMediaItems}
+                isAdmin={isUserAdmin}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 

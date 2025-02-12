@@ -71,10 +71,6 @@ export default function MediaItem({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => window.open(item.url, "_blank")}>
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Visit
-          </DropdownMenuItem>
           {isAdmin && (
             <>
               <DropdownMenuItem onClick={() => onEdit(item)}>
@@ -148,9 +144,16 @@ export default function MediaItem({
           <span>Article • {formatDate(item.created_at)}</span>
         </div>
         <div>
-          <h3 className="font-medium text-lg mb-2">{item.title}</h3>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-lg mb-2 hover:text-blue-600 hover:underline inline-block"
+          >
+            {item.title}
+          </a>
           {item.description && (
-            <div>
+            <div className="mt-2">
               <p
                 className={`text-gray-600 text-base leading-relaxed ${
                   !isExpanded ? "line-clamp-4" : ""

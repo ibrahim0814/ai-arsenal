@@ -30,11 +30,10 @@ interface MediaItem {
   created_at: string;
 }
 
-interface ProcessedData {
-  type: "article" | "tweet" | "youtube" | "other";
+interface Preview {
   title: string;
   description: string;
-  embedHtml?: string;
+  type: "article" | "tweet" | "youtube" | "other";
   videoId?: string;
 }
 
@@ -61,39 +60,44 @@ export function AddMediaModal({
   isProcessing = false,
 }: AddMediaModalProps) {
   const [url, setUrl] = useState(initialData?.url || "");
-  const [preview, setPreview] = useState<ProcessedData | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
-  const [editedDescription, setEditedDescription] = useState("");
   const [showEdit, setShowEdit] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(initialData?.title || "");
+  const [editedDescription, setEditedDescription] = useState(
+    initialData?.description || ""
+  );
 
-  // Reset state when modal closes or initialData changes
+  const clearState = () => {
+    setUrl("");
+    setPreview(null);
+    setShowEdit(false);
+    setEditedTitle("");
+    setEditedDescription("");
+    setIsLoadingPreview(false);
+  };
+
+  const handleClose = () => {
+    clearState();
+    onClose();
+  };
+
   useEffect(() => {
-    if (!isOpen) {
-      setUrl("");
-      setPreview(null);
-      setIsLoadingPreview(false);
-      setEditedTitle("");
-      setEditedDescription("");
-      setShowEdit(false);
-    } else if (initialData && mode === "edit") {
+    if (initialData) {
       setUrl(initialData.url);
-      setPreview({
-        type: initialData.type as "article" | "tweet" | "youtube" | "other",
-        title: initialData.title,
-        description: initialData.description || "",
-        embedHtml: initialData.embedHtml,
-        videoId: initialData.videoId,
-      });
       setEditedTitle(initialData.title);
       setEditedDescription(initialData.description || "");
       setShowEdit(true);
+      setPreview({
+        title: initialData.title,
+        description: initialData.description || "",
+        type: initialData.type,
+        videoId: initialData.videoId,
+      });
+    } else {
+      clearState();
     }
-  }, [isOpen, initialData, mode]);
-
-  const getTweetId = (url: string): string => {
-    return url.split("/").pop()?.split("?")[0] || "";
-  };
+  }, [initialData]);
 
   const loadPreview = async (url: string) => {
     if (!url) return;
@@ -145,11 +149,7 @@ export function AddMediaModal({
 
     await onSubmit(title, url, description, type);
     if (mode === "add") {
-      setUrl("");
-      setPreview(null);
-      setShowEdit(false);
-      setEditedTitle("");
-      setEditedDescription("");
+      clearState();
     }
   };
 
@@ -159,42 +159,27 @@ export function AddMediaModal({
     switch (preview.type) {
       case "tweet":
         return (
-          <div className="mt-4 border rounded-lg p-4">
-            <Tweet id={getTweetId(url)} />
+          <div className="mt-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <Tweet id={url.split("/").pop()?.split("?")[0] || ""} />
+            </div>
           </div>
         );
       case "youtube":
         return (
-          <div className="mt-4 border rounded-lg p-4">
-            {preview.videoId ? (
-              <YouTubeEmbed videoId={preview.videoId} />
-            ) : (
-              <div className="aspect-video w-full bg-gray-100 flex items-center justify-center">
-                <p className="text-gray-500">Video not available</p>
-              </div>
-            )}
+          <div className="mt-4">
+            <div className="aspect-video w-full">
+              <YouTubeEmbed videoId={preview.videoId || ""} />
+            </div>
           </div>
         );
       default:
-        return (
-          <div className="mt-4 border rounded-lg p-4">
-            <h3 className="font-semibold text-lg">{preview.title}</h3>
-            <p className="text-gray-600 mt-2">{preview.description}</p>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:underline mt-2 inline-block"
-            >
-              Visit URL
-            </a>
-          </div>
-        );
+        return null;
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>
@@ -259,7 +244,7 @@ export function AddMediaModal({
           </div>
 
           <div className="p-6 flex justify-end gap-2 mt-auto">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button

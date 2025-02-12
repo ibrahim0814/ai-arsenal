@@ -35,8 +35,6 @@ interface MediaGridProps {
   isAdmin: boolean;
 }
 
-type FilterType = "all" | "article" | "tweet" | "youtube";
-
 export function MediaGrid({
   items,
   onEdit,
@@ -44,8 +42,6 @@ export function MediaGrid({
   onReorder,
   isAdmin,
 }: MediaGridProps) {
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -72,51 +68,12 @@ export function MediaGrid({
     }
   };
 
-  const filteredItems = items.filter(
-    (item) => activeFilter === "all" || item.type === activeFilter
-  );
-
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button
-          variant={activeFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveFilter("all")}
-        >
-          <LayoutGrid className="h-4 w-4 mr-2" />
-          All
-        </Button>
-        <Button
-          variant={activeFilter === "article" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveFilter("article")}
-        >
-          <Newspaper className="h-4 w-4 mr-2" />
-          Articles
-        </Button>
-        <Button
-          variant={activeFilter === "tweet" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveFilter("tweet")}
-        >
-          <Twitter className="h-4 w-4 mr-2" />
-          Tweets
-        </Button>
-        <Button
-          variant={activeFilter === "youtube" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveFilter("youtube")}
-        >
-          <Youtube className="h-4 w-4 mr-2" />
-          YouTube
-        </Button>
-      </div>
-
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <SortableContext items={filteredItems} strategy={rectSortingStrategy}>
+        <SortableContext items={items} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
+            {items.map((item) => (
               <SortableMediaItem
                 key={item.id}
                 item={item}
