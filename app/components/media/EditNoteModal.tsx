@@ -9,39 +9,34 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 
-interface AddNoteModalProps {
+interface EditNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (content: string) => Promise<void>;
+  initialContent: string;
   isProcessing?: boolean;
 }
 
-export function AddNoteModal({
+export function EditNoteModal({
   isOpen,
   onClose,
   onSubmit,
+  initialContent,
   isProcessing = false,
-}: AddNoteModalProps) {
-  const [content, setContent] = useState("");
-
-  const handleClose = () => {
-    setContent("");
-    onClose();
-  };
+}: EditNoteModalProps) {
+  const [content, setContent] = useState(initialContent);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-
     await onSubmit(content);
-    setContent("");
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>What's on your mind?</DialogTitle>
+          <DialogTitle>Edit Note</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={handleSubmit}
@@ -58,17 +53,17 @@ export function AddNoteModal({
           </div>
 
           <div className="p-6 flex justify-end gap-2 mt-auto">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isProcessing || !content.trim()}>
               {isProcessing ? (
                 <span className="flex items-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  Saving...
                 </span>
               ) : (
-                "Add Note"
+                "Save Changes"
               )}
             </Button>
           </div>

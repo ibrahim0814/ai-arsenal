@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddNoteModal } from "./components/media/AddNoteModal";
 import Note from "./components/media/Note";
+import { EditNoteModal } from "./components/media/EditNoteModal";
+import { DeleteNoteModal } from "./components/media/DeleteNoteModal";
 
 interface Prompt {
   id: string;
@@ -96,6 +98,9 @@ export default function Home() {
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [isDeleteMediaModalOpen, setIsDeleteMediaModalOpen] = useState(false);
   const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
+  const [isEditNoteModalOpen, setIsEditNoteModalOpen] = useState(false);
+  const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -637,24 +642,6 @@ export default function Home() {
         <div className="flex items-center gap-2">
           {isUserAdmin && (
             <>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddNoteModalOpen(true)}
-                size="icon"
-                className="sm:hidden"
-                title="Quick Note"
-              >
-                <StickyNote className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddNoteModalOpen(true)}
-                className="hidden sm:flex"
-              >
-                <StickyNote className="h-4 w-4 mr-2" />
-                Quick Note
-              </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="icon" className="sm:hidden" title="Add Item">
@@ -691,6 +678,15 @@ export default function Home() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button
+                onClick={() => setIsAddNoteModalOpen(true)}
+                size="icon"
+                className="sm:hidden"
+                title="Quick Note"
+              >
+                <StickyNote className="h-4 w-4" />
+              </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -729,6 +725,14 @@ export default function Home() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button
+                onClick={() => setIsAddNoteModalOpen(true)}
+                className="hidden sm:flex"
+              >
+                <StickyNote className="h-4 w-4 mr-2" />
+                Quick Note
+              </Button>
             </>
           )}
           {user ? (
@@ -967,7 +971,7 @@ export default function Home() {
             </div>
 
             <TabsContent value="all">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {groupMediaItemsByDate(mediaItems).map(({ date, items }) => (
                   <DailySummaryCard key={date} date={date} items={items} />
                 ))}
@@ -1034,7 +1038,22 @@ export default function Home() {
             <TabsContent value="notes">
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <Note key={note.id} note={note} />
+                  <Note
+                    key={note.id}
+                    note={note}
+                    isAdmin={isUserAdmin}
+                    onEdit={(note) => {
+                      setSelectedNote(note);
+                      setIsEditNoteModalOpen(true);
+                    }}
+                    onDelete={(id) => {
+                      const note = notes.find((n) => n.id === id);
+                      if (note) {
+                        setSelectedNote(note);
+                        setIsDeleteNoteModalOpen(true);
+                      }
+                    }}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -1123,6 +1142,89 @@ export default function Home() {
         onSubmit={handleAddNote}
         isProcessing={isProcessing}
       />
+
+      {selectedNote && (
+        <>
+          <EditNoteModal
+            isOpen={isEditNoteModalOpen}
+            onClose={() => {
+              setIsEditNoteModalOpen(false);
+              setSelectedNote(null);
+            }}
+            initialContent={selectedNote.content}
+            onSubmit={async (content) => {
+              try {
+                const response = await fetch(`/api/notes/${selectedNote.id}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ content }),
+                });
+
+                if (!response.ok) {
+                  throw new Error("Failed to update note");
+                }
+
+                await fetchNotes();
+                setIsEditNoteModalOpen(false);
+                setSelectedNote(null);
+                toast({
+                  title: "Success",
+                  description: "Note updated successfully",
+                  duration: 2000,
+                });
+              } catch (error: any) {
+                console.error("Error updating note:", error);
+                toast({
+                  title: "Error",
+                  description: error.message || "Failed to update note",
+                  variant: "destructive",
+                  duration: 2000,
+                });
+              }
+            }}
+            isProcessing={isProcessing}
+          />
+
+          <DeleteNoteModal
+            isOpen={isDeleteNoteModalOpen}
+            onClose={() => {
+              setIsDeleteNoteModalOpen(false);
+              setSelectedNote(null);
+            }}
+            onDelete={async () => {
+              try {
+                const response = await fetch(`/api/notes/${selectedNote.id}`, {
+                  method: "DELETE",
+                });
+
+                if (!response.ok) {
+                  throw new Error("Failed to delete note");
+                }
+
+                await fetchNotes();
+                setIsDeleteNoteModalOpen(false);
+                setSelectedNote(null);
+                toast({
+                  title: "Success",
+                  description: "Note deleted successfully",
+                  duration: 2000,
+                });
+              } catch (error: any) {
+                console.error("Error deleting note:", error);
+                toast({
+                  title: "Error",
+                  description: error.message || "Failed to delete note",
+                  variant: "destructive",
+                  duration: 2000,
+                });
+              }
+            }}
+            isProcessing={isProcessing}
+          />
+        </>
+      )}
 
       <LoginModal
         open={isLoginModalOpen}

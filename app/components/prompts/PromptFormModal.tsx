@@ -112,6 +112,14 @@ export function PromptFormModal({
             </div>
           </div>
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={isProcessing}>
               {isProcessing ? (
                 <span className="flex items-center">
