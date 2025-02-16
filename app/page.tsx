@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   Twitter,
   Youtube,
+  StickyNote,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromptFormModal } from "./components/prompts/PromptFormModal";
@@ -37,6 +38,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AddNoteModal } from "./components/media/AddNoteModal";
+import Note from "./components/media/Note";
 
 interface Prompt {
   id: string;
@@ -58,10 +61,17 @@ interface MediaItem {
   created_at: string;
 }
 
+interface Note {
+  id: string;
+  content: string;
+  created_at: string;
+}
+
 export default function Home() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
@@ -85,12 +95,14 @@ export default function Home() {
   );
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [isDeleteMediaModalOpen, setIsDeleteMediaModalOpen] = useState(false);
+  const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTools();
     fetchPrompts();
     fetchMediaItems();
+    fetchNotes();
     checkUser();
   }, []);
 
@@ -145,6 +157,19 @@ export default function Home() {
       setMediaItems(data);
     } catch (error) {
       console.error("Error fetching media items:", error);
+    }
+  }
+
+  async function fetchNotes() {
+    try {
+      const response = await fetch("/api/notes");
+      if (!response.ok) {
+        throw new Error("Failed to fetch notes");
+      }
+      const data = await response.json();
+      setNotes(data);
+    } catch (error) {
+      console.error("Error fetching notes:", error);
     }
   }
 
@@ -527,8 +552,12 @@ export default function Home() {
     items.forEach((item) => {
       const date = new Date(item.created_at);
       // Convert to Pacific time for grouping
-      const pacificDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-      const dateKey = pacificDate.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles" }).split(",")[0];
+      const pacificDate = new Date(
+        date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+      );
+      const dateKey = pacificDate
+        .toLocaleDateString("en-US", { timeZone: "America/Los_Angeles" })
+        .split(",")[0];
 
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -551,6 +580,35 @@ export default function Home() {
       }));
   };
 
+  async function handleAddNote(content: string) {
+    setIsProcessing(true);
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add note");
+      }
+
+      setIsAddNoteModalOpen(false);
+      await fetchNotes();
+    } catch (error: any) {
+      console.error("Error in handleAddNote:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add note",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   if (loading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
@@ -570,72 +628,166 @@ export default function Home() {
   }
 
   return (
-    <main className="container mx-auto px-8 pt-10 pb-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          AI Arsenal <span className="text-gray-400">⚔️</span>
-        </h1>
-        <div className="flex items-center gap-3">
+    <main className="container mx-auto px-4 sm:px-8 pt-4 sm:pt-10 pb-6">
+      <div className="flex justify-between items-center gap-4 mb-6">
+        <div className="flex items-center ml-2">
+          <h1 className="text-xl sm:text-2xl font-bold">AI Arsenal</h1>
+          <span className="text-2xl sm:text-3xl ml-1.5 sm:ml-2 -mt-1">⚔️</span>
+        </div>
+        <div className="flex items-center gap-2">
           {isUserAdmin && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  setActiveTab("tools");
-                  setIsAddModalOpen(true);
-                }}>
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Add Tool
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setActiveTab("prompts");
-                  setIsAddModalOpen(true);
-                }}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Add Prompt
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setActiveTab("media");
-                  setIsAddModalOpen(true);
-                }}>
-                  <Newspaper className="h-4 w-4 mr-2" />
-                  Add Media
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddNoteModalOpen(true)}
+                size="icon"
+                className="sm:hidden"
+                title="Quick Note"
+              >
+                <StickyNote className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddNoteModalOpen(true)}
+                className="hidden sm:flex"
+              >
+                <StickyNote className="h-4 w-4 mr-2" />
+                Quick Note
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" className="sm:hidden" title="Add Item">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveTab("tools");
+                      setIsAddModalOpen(true);
+                    }}
+                  >
+                    <Wrench className="h-4 w-4 mr-2" />
+                    Add Tool
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveTab("prompts");
+                      setIsAddModalOpen(true);
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Prompt
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveTab("media");
+                      setIsAddModalOpen(true);
+                    }}
+                  >
+                    <Newspaper className="h-4 w-4 mr-2" />
+                    Add Media
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="hidden sm:flex">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveTab("tools");
+                      setIsAddModalOpen(true);
+                    }}
+                  >
+                    <Wrench className="h-4 w-4 mr-2" />
+                    Add Tool
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveTab("prompts");
+                      setIsAddModalOpen(true);
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Prompt
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveTab("media");
+                      setIsAddModalOpen(true);
+                    }}
+                  >
+                    <Newspaper className="h-4 w-4 mr-2" />
+                    Add Media
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           )}
           {user ? (
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="sm:hidden"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSignOut}
+                className="hidden sm:flex"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </>
           ) : (
-            <Button onClick={() => setIsLoginModalOpen(true)}>Sign In</Button>
+            <>
+              <Button
+                size="icon"
+                onClick={() => setIsLoginModalOpen(true)}
+                className="sm:hidden"
+                title="Sign In"
+              >
+                <LogOut className="h-4 w-4 rotate-180" />
+              </Button>
+              <Button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="hidden sm:flex"
+              >
+                Sign In
+              </Button>
+            </>
           )}
         </div>
       </div>
 
       <Tabs
         defaultValue="tools"
-        className="space-y-1 pb-6"
+        className="space-y-2 pb-4"
         onValueChange={setActiveTab}
       >
-        <TabsList>
-          <TabsTrigger value="tools">
-            <Wrench className="w-4 h-4 mr-2" />
+        <TabsList className="flex overflow-x-auto justify-start">
+          <TabsTrigger value="tools" className="min-w-[100px]">
+            <Wrench className="h-4 w-4 mr-2" />
             Tools
           </TabsTrigger>
-          <TabsTrigger value="prompts">
-            <FileText className="w-4 h-4 mr-2" />
+          <TabsTrigger value="prompts" className="min-w-[100px]">
+            <FileText className="h-4 w-4 mr-2" />
             Prompts
           </TabsTrigger>
-          <TabsTrigger value="media">
-            <Newspaper className="w-4 h-4 mr-2" />
+          <TabsTrigger value="media" className="min-w-[100px]">
+            <Newspaper className="h-4 w-4 mr-2" />
             Media
           </TabsTrigger>
         </TabsList>
@@ -779,25 +931,43 @@ export default function Home() {
 
         <TabsContent value="media">
           <Tabs defaultValue="all" className="w-full">
-            <div className="mb-4">
-              <TabsList>
-                <TabsTrigger value="all" className="w-10">
+            <div className="mb-2 flex">
+              <TabsList className="flex overflow-x-auto">
+                <TabsTrigger
+                  value="all"
+                  className="flex-1 sm:flex-none min-w-[60px]"
+                >
                   <LayoutGrid className="h-4 w-4" />
                 </TabsTrigger>
-                <TabsTrigger value="article" className="w-10">
+                <TabsTrigger
+                  value="article"
+                  className="flex-1 sm:flex-none min-w-[60px]"
+                >
                   <Newspaper className="h-4 w-4" />
                 </TabsTrigger>
-                <TabsTrigger value="tweet" className="w-10">
+                <TabsTrigger
+                  value="tweet"
+                  className="flex-1 sm:flex-none min-w-[60px]"
+                >
                   <Twitter className="h-4 w-4" />
                 </TabsTrigger>
-                <TabsTrigger value="youtube" className="w-10">
+                <TabsTrigger
+                  value="youtube"
+                  className="flex-1 sm:flex-none min-w-[60px]"
+                >
                   <Youtube className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger
+                  value="notes"
+                  className="flex-1 sm:flex-none min-w-[60px]"
+                >
+                  <StickyNote className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
             </div>
 
             <TabsContent value="all">
-              <div className="space-y-6">
+              <div className="space-y-2">
                 {groupMediaItemsByDate(mediaItems).map(({ date, items }) => (
                   <DailySummaryCard key={date} date={date} items={items} />
                 ))}
@@ -859,6 +1029,14 @@ export default function Home() {
                 onReorder={setMediaItems}
                 isAdmin={isUserAdmin}
               />
+            </TabsContent>
+
+            <TabsContent value="notes">
+              <div className="space-y-3">
+                {notes.map((note) => (
+                  <Note key={note.id} note={note} />
+                ))}
+              </div>
             </TabsContent>
           </Tabs>
         </TabsContent>
@@ -938,6 +1116,13 @@ export default function Home() {
           />
         </>
       )}
+
+      <AddNoteModal
+        isOpen={isAddNoteModalOpen}
+        onClose={() => setIsAddNoteModalOpen(false)}
+        onSubmit={handleAddNote}
+        isProcessing={isProcessing}
+      />
 
       <LoginModal
         open={isLoginModalOpen}

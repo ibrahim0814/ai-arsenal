@@ -36,16 +36,23 @@ export default function ToolItem({
 
   return (
     <div className="w-full border rounded-lg p-4 bg-white relative">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="flex-1">
-          <a
-            href={tool.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline text-lg font-medium"
-          >
-            {tool.title}
-          </a>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+            <a
+              href={tool.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-lg font-medium"
+            >
+              {tool.title}
+            </a>
+            {tool.is_personal_tool && (
+              <Badge className="bg-blue-100 text-blue-800 w-fit">
+                Current Stack
+              </Badge>
+            )}
+          </div>
           {tool.description && (
             <p className="text-gray-500 mt-1 mb-3 text-sm">
               {tool.description}
@@ -63,33 +70,28 @@ export default function ToolItem({
             ))}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          {tool.is_personal_tool && (
-            <Badge className="bg-blue-100 text-blue-800">Current Stack</Badge>
-          )}
-          {isAdmin && (
-            <div className="flex space-x-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsEditModalOpen(true)}
-                className="text-blue-500 hover:text-blue-700"
-              >
-                <Edit className="h-4 w-4" />
-                <span className="sr-only">Edit</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Delete</span>
-              </Button>
-            </div>
-          )}
-        </div>
+        {isAdmin && (
+          <div className="flex sm:flex-col items-center sm:items-end gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsEditModalOpen(true)}
+              className="text-blue-500 hover:text-blue-700"
+            >
+              <Edit className="h-4 w-4" />
+              <span className="sr-only">Edit</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete</span>
+            </Button>
+          </div>
+        )}
       </div>
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
