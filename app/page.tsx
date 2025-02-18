@@ -67,6 +67,7 @@ interface Note {
   id: string;
   content: string;
   created_at: string;
+  type: "note";
 }
 
 export default function Home() {
@@ -172,7 +173,7 @@ export default function Home() {
         throw new Error("Failed to fetch notes");
       }
       const data = await response.json();
-      setNotes(data);
+      setNotes(data.map((note: any) => ({ ...note, type: "note" as const })));
     } catch (error) {
       console.error("Error fetching notes:", error);
     }
@@ -551,10 +552,11 @@ export default function Home() {
     }
   }
 
-  const groupMediaItemsByDate = (items: MediaItem[]) => {
-    const groups: { [key: string]: MediaItem[] } = {};
+  const groupContentByDate = (mediaItems: MediaItem[], notes: Note[]) => {
+    const groups: { [key: string]: (MediaItem | Note)[] } = {};
 
-    items.forEach((item) => {
+    // Helper function to add item to the appropriate date group
+    const addToGroup = (item: MediaItem | Note) => {
       const date = new Date(item.created_at);
       // Convert to Pacific time for grouping
       const pacificDate = new Date(
@@ -568,8 +570,15 @@ export default function Home() {
         groups[dateKey] = [];
       }
       groups[dateKey].push(item);
-    });
+    };
 
+    // Add all items to their respective date groups
+    mediaItems.forEach(addToGroup);
+    notes
+      .map((note) => ({ ...note, type: "note" as const }))
+      .forEach(addToGroup);
+
+    // Sort dates and items within each date
     return Object.entries(groups)
       .sort(([dateA], [dateB]) => {
         const dateAObj = new Date(dateA);
@@ -971,10 +980,39 @@ export default function Home() {
             </div>
 
             <TabsContent value="all">
-              <div className="space-y-1">
-                {groupMediaItemsByDate(mediaItems).map(({ date, items }) => (
-                  <DailySummaryCard key={date} date={date} items={items} />
-                ))}
+              <div className="space-y-3">
+                {groupContentByDate(mediaItems, notes).map(
+                  ({ date, items }) => (
+                    <DailySummaryCard
+                      key={date}
+                      date={date}
+                      items={items}
+                      isAdmin={isUserAdmin}
+                      onEditNote={(note) => {
+                        setSelectedNote({ ...note, type: "note" });
+                        setIsEditNoteModalOpen(true);
+                      }}
+                      onDeleteNote={(id) => {
+                        const note = notes.find((n) => n.id === id);
+                        if (note) {
+                          setSelectedNote({ ...note, type: "note" });
+                          setIsDeleteNoteModalOpen(true);
+                        }
+                      }}
+                      onEditMedia={(item) => {
+                        setSelectedMediaItem(item);
+                        setIsMediaModalOpen(true);
+                      }}
+                      onDeleteMedia={(id) => {
+                        const mediaItem = mediaItems.find((i) => i.id === id);
+                        if (mediaItem) {
+                          setSelectedMediaItem(mediaItem);
+                          setIsDeleteMediaModalOpen(true);
+                        }
+                      }}
+                    />
+                  )
+                )}
               </div>
             </TabsContent>
 
@@ -1043,13 +1081,13 @@ export default function Home() {
                     note={note}
                     isAdmin={isUserAdmin}
                     onEdit={(note) => {
-                      setSelectedNote(note);
+                      setSelectedNote({ ...note, type: "note" });
                       setIsEditNoteModalOpen(true);
                     }}
                     onDelete={(id) => {
                       const note = notes.find((n) => n.id === id);
                       if (note) {
-                        setSelectedNote(note);
+                        setSelectedNote({ ...note, type: "note" });
                         setIsDeleteNoteModalOpen(true);
                       }
                     }}
