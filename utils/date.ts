@@ -11,8 +11,9 @@ export const formatPacificDate = (
 
 export const toPacificDate = (dateString: string) => {
   const date = new Date(dateString);
+  const utcDate = new Date(date.toUTCString());
   return new Date(
-    date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+    utcDate.getTime() + (utcDate.getTimezoneOffset() + 480) * 60000
   );
 };
 

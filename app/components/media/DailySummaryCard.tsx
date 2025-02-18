@@ -1,9 +1,7 @@
-import { Calendar, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Calendar } from "lucide-react";
 import Note from "./Note";
 import MediaItem from "./MediaItem";
-import { formatPacificDateVeryShort, formatPacificTime } from "@/utils/date";
+import { formatPacificDateVeryShort, toPacificDate } from "@/utils/date";
 
 interface MediaItem {
   id: string;
@@ -48,10 +46,22 @@ export default function DailySummaryCard({
     return formatPacificDateVeryShort(dateString);
   };
 
+  // Convert dates to Pacific timezone for comparison
+  const getPacificDate = (dateString: string) => {
+    const date = toPacificDate(dateString);
+    return date.setHours(0, 0, 0, 0); // normalize to start of day
+  };
+
   // Sort items by creation time
   const sortedItems = [...items].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // Filter items to only show those matching the card's date
+  const cardDate = getPacificDate(date);
+  const filteredItems = sortedItems.filter(
+    (item) => getPacificDate(item.created_at) === cardDate
   );
 
   return (
@@ -63,7 +73,7 @@ export default function DailySummaryCard({
         </div>
 
         <div className="space-y-3">
-          {sortedItems.map((item) => (
+          {filteredItems.map((item) => (
             <div key={item.id} className="relative">
               {item.type === "note" ? (
                 <Note
