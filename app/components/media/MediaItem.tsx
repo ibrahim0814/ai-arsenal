@@ -32,8 +32,8 @@ interface MediaItem {
 
 interface MediaItemProps {
   item: MediaItem;
-  onEdit: (item: MediaItem) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (item: MediaItem) => void;
+  onDelete?: (id: string) => void;
   isAdmin: boolean;
   hideDate?: boolean;
 }
@@ -86,7 +86,7 @@ export default function MediaItem({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {isAdmin && (
+          {isAdmin && onEdit && onDelete && (
             <>
               <DropdownMenuItem onClick={() => onEdit(item)}>
                 Edit
