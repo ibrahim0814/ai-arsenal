@@ -25,40 +25,6 @@ function detectMediaType(url: string): MediaType {
   }
 }
 
-async function generateSummary(
-  content: string,
-  type: MediaType,
-  title: string,
-  url: string
-): Promise<string> {
-  try {
-    // Import the LLM API
-    const { query_llm } = require("../../utils/llm");
-
-    let prompt = "";
-    switch (type) {
-      case "article":
-        prompt = `Summarize this article in 2-3 concise paragraphs. Focus on the key points and insights. Don't include any introductory phrases like "This article discusses" - just give the summary directly.\n\nTitle: ${title}\nContent: ${content}`;
-        break;
-      case "tweet":
-        prompt = `Explain the significance of this tweet in 1-2 sentences. Focus on the key message or insight.\n\nTweet: ${content}`;
-        break;
-      case "youtube":
-        prompt = `Summarize what this YouTube video is about in 2-3 sentences based on its title and description. Focus on the main topic and value proposition.\n\nTitle: ${title}\nDescription: ${content}`;
-        break;
-      default:
-        prompt = `Summarize this content in 2-3 sentences:\n\n${content}`;
-    }
-
-    const summary = await query_llm(prompt, "anthropic");
-    return summary.trim();
-  } catch (error) {
-    console.error("Error generating summary:", error);
-    // Fallback to content or title if summary generation fails
-    return content.length > 500 ? content.substring(0, 500) + "..." : content;
-  }
-}
-
 async function fetchAndSummarizeContent(
   url: string,
   type: MediaType
@@ -93,9 +59,37 @@ async function fetchAndSummarizeContent(
         content = $("body").text().trim();
     }
 
-    return await generateSummary(content, type, "", url);
+    if (!content) {
+      return "";
+    }
+
+    // Use the dedicated summarize endpoint with the full URL
+    const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+    const host = process.env.VERCEL_URL || "localhost:3000";
+    const summaryResponse = await fetch(
+      `${protocol}://${host}/api/media/summarize`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content, type }),
+      }
+    );
+
+    if (!summaryResponse.ok) {
+      throw new Error(
+        `Failed to summarize content: ${summaryResponse.statusText}`
+      );
+    }
+
+    const { summary } = await summaryResponse.json();
+    return (
+      summary ||
+      (content.length > 500 ? `${content.substring(0, 500)}...` : content)
+    );
   } catch (error) {
-    console.error("Error fetching content:", error);
+    console.error("Error fetching or summarizing content:", error);
     return ""; // Return empty string if fetching fails
   }
 }
@@ -186,7 +180,9 @@ export async function POST(request: Request) {
 
     // Create the media item with Pacific timezone
     const now = new Date();
-    const pacificTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+    const pacificTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+    );
 
     const mediaItem = await prisma.mediaItem.create({
       data: {

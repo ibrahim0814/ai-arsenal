@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Tool } from "../types/tool";
 import { LoginModal } from "./components/LoginModal";
 import { getCurrentUser, isAdmin, signOut } from "../utils/auth";
@@ -42,6 +42,8 @@ import { AddNoteModal } from "./components/media/AddNoteModal";
 import Note from "./components/media/Note";
 import { EditNoteModal } from "./components/media/EditNoteModal";
 import { DeleteNoteModal } from "./components/media/DeleteNoteModal";
+import { SearchBar } from "./components/tools/SearchBar";
+import { indexTools } from "@/lib/meilisearch";
 
 interface Prompt {
   id: string;
@@ -103,6 +105,9 @@ export default function Home() {
   const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const { toast } = useToast();
+  const [searchResults, setSearchResults] = useState<Tool[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const latestSearchRef = useRef<string>("");
 
   useEffect(() => {
     fetchTools();
@@ -111,6 +116,12 @@ export default function Home() {
     fetchNotes();
     checkUser();
   }, []);
+
+  useEffect(() => {
+    if (tools.length > 0) {
+      indexTools(tools).catch(console.error);
+    }
+  }, [tools]);
 
   async function checkUser() {
     const currentUser = await getCurrentUser();
@@ -178,6 +189,48 @@ export default function Home() {
       console.error("Error fetching notes:", error);
     }
   }
+
+  const handleSearch = useCallback(
+    async (query: string) => {
+      // Store the current search query
+      latestSearchRef.current = query;
+
+      if (!query.trim()) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const response = await fetch(
+          `/api/tools/search?q=${encodeURIComponent(query)}`
+        );
+
+        // Only update results if this is still the latest search
+        if (latestSearchRef.current === query) {
+          if (!response.ok) {
+            throw new Error("Failed to search tools");
+          }
+          const data = await response.json();
+          setSearchResults(data.hits);
+          setIsSearching(false);
+        }
+      } catch (error) {
+        // Only show error if this is still the latest search
+        if (latestSearchRef.current === query) {
+          console.error("Error searching tools:", error);
+          toast({
+            title: "Error",
+            description: "Failed to search tools. Please try again.",
+            variant: "destructive",
+          });
+          setIsSearching(false);
+        }
+      }
+    },
+    [toast]
+  );
 
   async function handleAddTool(
     link: string,
@@ -790,31 +843,64 @@ export default function Home() {
         className="space-y-2 pb-4"
         onValueChange={setActiveTab}
       >
-        <TabsList className="flex overflow-x-auto justify-start">
-          <TabsTrigger value="tools" className="min-w-[100px]">
-            <Wrench className="h-4 w-4 mr-2" />
-            Tools
-          </TabsTrigger>
-          <TabsTrigger value="prompts" className="min-w-[100px]">
-            <FileText className="h-4 w-4 mr-2" />
-            Prompts
-          </TabsTrigger>
-          <TabsTrigger value="media" className="min-w-[100px]">
-            <Newspaper className="h-4 w-4 mr-2" />
-            Media
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4 sm:mb-0">
+          <TabsList className="flex overflow-x-auto justify-start">
+            <TabsTrigger value="tools" className="min-w-[100px]">
+              <Wrench className="h-4 w-4 mr-2" />
+              Tools
+            </TabsTrigger>
+            <TabsTrigger value="prompts" className="min-w-[100px]">
+              <FileText className="h-4 w-4 mr-2" />
+              Prompts
+            </TabsTrigger>
+            <TabsTrigger value="media" className="min-w-[100px]">
+              <Newspaper className="h-4 w-4 mr-2" />
+              Media
+            </TabsTrigger>
+          </TabsList>
+          {activeTab === "tools" && (
+            <div className="w-full sm:w-auto sm:ml-auto">
+              <SearchBar
+                onSearch={handleSearch}
+                className="w-full sm:w-[300px]"
+              />
+            </div>
+          )}
+        </div>
 
-        <TabsContent value="tools" className="grid grid-cols-1 gap-2">
-          {tools.map((tool) => (
-            <ToolItem
-              key={tool.id}
-              tool={tool}
-              onEdit={editTool}
-              onDelete={deleteTool}
-              isAdmin={isUserAdmin}
-            />
-          ))}
+        <TabsContent value="tools" className="space-y-4">
+          <div className="grid grid-cols-1 gap-2">
+            {isSearching ? (
+              <div className="text-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                <p className="text-sm text-gray-500 mt-2">Searching tools...</p>
+              </div>
+            ) : searchResults.length > 0 ? (
+              searchResults.map((tool) => (
+                <ToolItem
+                  key={tool.id}
+                  tool={tool}
+                  onEdit={editTool}
+                  onDelete={deleteTool}
+                  isAdmin={isUserAdmin}
+                />
+              ))
+            ) : searchResults.length === 0 && isSearching === false ? (
+              tools.map((tool) => (
+                <ToolItem
+                  key={tool.id}
+                  tool={tool}
+                  onEdit={editTool}
+                  onDelete={deleteTool}
+                  isAdmin={isUserAdmin}
+                />
+              ))
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-500">No tools found</p>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="prompts" className="grid grid-cols-1 gap-2">
