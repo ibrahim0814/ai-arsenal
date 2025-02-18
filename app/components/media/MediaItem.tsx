@@ -8,10 +8,12 @@ import {
   MoreVertical,
   ChevronDown,
   ChevronUp,
+  Clock,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tweet } from "react-tweet";
 import YouTubeEmbed from "./YouTubeEmbed";
+import { formatPacificDateShort, formatPacificTime } from "@/utils/date";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +38,14 @@ interface MediaItemProps {
   onDelete?: (id: string) => void;
   isAdmin: boolean;
   hideDate?: boolean;
+  showTimeOnly?: boolean;
 }
+
+const styles = `
+.tweet-no-date [data-testid="User-Name"] > div:last-child {
+  display: none !important;
+}
+` as const;
 
 export default function MediaItem({
   item,
@@ -44,16 +53,25 @@ export default function MediaItem({
   onDelete,
   isAdmin,
   hideDate,
+  showTimeOnly,
 }: MediaItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  useEffect(() => {
+    const styleElement = document.createElement("style");
+    styleElement.textContent = styles;
+    document.head.appendChild(styleElement);
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    if (showTimeOnly) {
+      return formatPacificTime(dateString);
+    }
+    return formatPacificDateShort(dateString);
   };
 
   const getTweetId = (url: string): string => {
@@ -71,6 +89,17 @@ export default function MediaItem({
       default:
         return "Other";
     }
+  };
+
+  const renderTimeLabel = () => {
+    if (hideDate) {
+      return renderTypeLabel();
+    }
+    const time = formatDate(item.created_at);
+    if (showTimeOnly) {
+      return time;
+    }
+    return `${renderTypeLabel()} • ${time}`;
   };
 
   const renderActions = () => (
@@ -109,14 +138,10 @@ export default function MediaItem({
       <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
         {isAdmin && renderActions()}
         <div className="p-4">
-          <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
-            <Twitter className="h-4 w-4" />
-            <span>
-              {hideDate ? "X Post" : `X Post • ${formatDate(item.created_at)}`}
-            </span>
-          </div>
           <div className="flex justify-center">
-            <Tweet id={getTweetId(item.url)} />
+            <div className="tweet-no-date">
+              <Tweet id={getTweetId(item.url)} />
+            </div>
           </div>
         </div>
       </div>
@@ -128,14 +153,6 @@ export default function MediaItem({
       <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
         {isAdmin && renderActions()}
         <div className="p-4">
-          <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
-            <Youtube className="h-4 w-4" />
-            <span>
-              {hideDate
-                ? "YouTube"
-                : `YouTube • ${formatDate(item.created_at)}`}
-            </span>
-          </div>
           <div className="aspect-video w-full mb-3">
             {item.videoId ? (
               <YouTubeEmbed videoId={item.videoId} />
@@ -160,12 +177,6 @@ export default function MediaItem({
     <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       {isAdmin && renderActions()}
       <div className="p-4">
-        <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
-          <Newspaper className="h-4 w-4" />
-          <span>
-            {hideDate ? "Article" : `Article • ${formatDate(item.created_at)}`}
-          </span>
-        </div>
         <div>
           <a
             href={item.url}

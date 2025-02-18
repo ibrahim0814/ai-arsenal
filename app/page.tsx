@@ -44,6 +44,7 @@ import { EditNoteModal } from "./components/media/EditNoteModal";
 import { DeleteNoteModal } from "./components/media/DeleteNoteModal";
 import { SearchBar } from "./components/tools/SearchBar";
 import { indexTools } from "@/lib/meilisearch";
+import { toPacificDate, formatPacificDate } from "@/utils/date";
 
 interface Prompt {
   id: string;
@@ -610,14 +611,14 @@ export default function Home() {
 
     // Helper function to add item to the appropriate date group
     const addToGroup = (item: MediaItem | Note) => {
-      const date = new Date(item.created_at);
-      // Convert to Pacific time for grouping
-      const pacificDate = new Date(
-        date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
-      );
-      const dateKey = pacificDate
-        .toLocaleDateString("en-US", { timeZone: "America/Los_Angeles" })
-        .split(",")[0];
+      const pacificDate = toPacificDate(item.created_at);
+      // Get just the date part for grouping (without changing the original timestamp)
+      const dateKey = pacificDate.toLocaleDateString("en-US", {
+        timeZone: "America/Los_Angeles",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -634,9 +635,13 @@ export default function Home() {
     // Sort dates and items within each date
     return Object.entries(groups)
       .sort(([dateA], [dateB]) => {
-        const dateAObj = new Date(dateA);
-        const dateBObj = new Date(dateB);
-        return dateBObj.getTime() - dateAObj.getTime();
+        // Convert the date strings back to Date objects for the first item in each group
+        const dateAFirstItem = groups[dateA][0].created_at;
+        const dateBFirstItem = groups[dateB][0].created_at;
+        return (
+          new Date(dateBFirstItem).getTime() -
+          new Date(dateAFirstItem).getTime()
+        );
       })
       .map(([date, items]) => ({
         date,

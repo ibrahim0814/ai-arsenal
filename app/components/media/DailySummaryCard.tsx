@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import Note from "./Note";
 import MediaItem from "./MediaItem";
+import { formatPacificDateVeryShort, formatPacificTime } from "@/utils/date";
 
 interface MediaItem {
   id: string;
@@ -44,15 +45,14 @@ export default function DailySummaryCard({
   onDeleteMedia,
 }: DailySummaryCardProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "America/Los_Angeles",
-    });
+    return formatPacificDateVeryShort(dateString);
   };
+
+  // Sort items by creation time
+  const sortedItems = [...items].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   return (
     <div className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
@@ -63,7 +63,7 @@ export default function DailySummaryCard({
         </div>
 
         <div className="space-y-3">
-          {items.map((item) => (
+          {sortedItems.map((item) => (
             <div key={item.id} className="relative">
               {item.type === "note" ? (
                 <Note
@@ -71,7 +71,7 @@ export default function DailySummaryCard({
                   isAdmin={isAdmin}
                   onEdit={onEditNote}
                   onDelete={onDeleteNote}
-                  hideDate
+                  showTimeOnly={true}
                 />
               ) : (
                 <MediaItem
@@ -79,7 +79,7 @@ export default function DailySummaryCard({
                   isAdmin={isAdmin}
                   onEdit={onEditMedia}
                   onDelete={onDeleteMedia}
-                  hideDate
+                  showTimeOnly={true}
                 />
               )}
             </div>

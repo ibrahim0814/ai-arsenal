@@ -1,5 +1,6 @@
 import { Calendar, Trash2, Edit, StickyNote, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatPacificDateTime, formatPacificTime } from "@/utils/date";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ interface NoteProps {
   onEdit?: (note: Note) => void;
   isAdmin?: boolean;
   hideDate?: boolean;
+  showTimeOnly?: boolean;
 }
 
 export default function Note({
@@ -28,18 +30,13 @@ export default function Note({
   onEdit,
   isAdmin,
   hideDate,
+  showTimeOnly,
 }: NoteProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      timeZone: "America/Los_Angeles",
-    });
+    if (showTimeOnly) {
+      return formatPacificTime(dateString);
+    }
+    return formatPacificDateTime(dateString);
   };
 
   const renderActions = () => (
@@ -77,22 +74,7 @@ export default function Note({
     <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       {isAdmin && renderActions()}
       <div className="p-4">
-        <div className="flex items-center gap-4 text-gray-500 text-xs mb-3">
-          <div className="flex items-center gap-1.5">
-            {hideDate ? (
-              <>
-                <StickyNote className="h-3 w-3" />
-                <span>Quick Note</span>
-              </>
-            ) : (
-              <>
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(note.created_at)}</span>
-              </>
-            )}
-          </div>
-        </div>
-        <p className="text-gray-800 whitespace-pre-wrap">{note.content}</p>
+        <p className="text-gray-800 whitespace-pre-wrap pr-8">{note.content}</p>
       </div>
     </div>
   );
