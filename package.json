@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "docker-stop": "docker stop $(docker ps -q)"
+    "docker-stop": "docker stop $(docker ps -q)",
+    "login": "chmod 600 oracle-private.key && ssh -i oracle-private.key opc@146.235.225.150",
+    "server-info": "ssh -i oracle-private.key opc@146.235.225.150 'echo \"=== System Info ===\" && uname -a && echo \"\n=== Memory Usage ===\" && free -h && echo \"\n=== Disk Usage ===\" && df -h && echo \"\n=== CPU Info ===\" && lscpu && echo \"\n=== Docker Containers ===\" && docker ps && echo \"\n=== Active Ports ===\" && sudo netstat -tulpn | grep LISTEN'"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

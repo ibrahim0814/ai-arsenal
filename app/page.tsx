@@ -746,14 +746,16 @@ export default function Home() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button
-                onClick={() => setIsAddNoteModalOpen(true)}
-                size="icon"
-                className="sm:hidden"
-                title="Quick Note"
-              >
-                <StickyNote className="h-4 w-4" />
-              </Button>
+              {user && (
+                <Button
+                  onClick={() => setIsAddNoteModalOpen(true)}
+                  size="icon"
+                  className="sm:hidden"
+                  title="Quick Note"
+                >
+                  <StickyNote className="h-4 w-4" />
+                </Button>
+              )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -793,13 +795,15 @@ export default function Home() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button
-                onClick={() => setIsAddNoteModalOpen(true)}
-                className="hidden sm:flex"
-              >
-                <StickyNote className="h-4 w-4 mr-2" />
-                Quick Note
-              </Button>
+              {user && (
+                <Button
+                  onClick={() => setIsAddNoteModalOpen(true)}
+                  className="hidden sm:flex"
+                >
+                  <StickyNote className="h-4 w-4 mr-2" />
+                  Quick Note
+                </Button>
+              )}
             </>
           )}
           {user ? (
@@ -1061,18 +1065,20 @@ export default function Home() {
                 >
                   <Youtube className="h-4 w-4" />
                 </TabsTrigger>
-                <TabsTrigger
-                  value="notes"
-                  className="flex-1 sm:flex-none min-w-[60px]"
-                >
-                  <StickyNote className="h-4 w-4" />
-                </TabsTrigger>
+                {user && (
+                  <TabsTrigger
+                    value="notes"
+                    className="flex-1 sm:flex-none min-w-[60px]"
+                  >
+                    <StickyNote className="h-4 w-4" />
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
             <TabsContent value="all">
               <div className="space-y-3">
-                {groupContentByDate(mediaItems, notes).map(
+                {groupContentByDate(mediaItems, user ? notes : []).map(
                   ({ date, items }) => (
                     <DailySummaryCard
                       key={date}

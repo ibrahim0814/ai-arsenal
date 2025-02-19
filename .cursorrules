@@ -1,147 +1,37 @@
 # Scratchpad
 
-## Current Task: Add Media Tab for AI-related Content
+## Current Task: Set up Meilisearch Server on Oracle Cloud
 
-### Requirements:
+### Server Information:
 
-- Add a new tab for AI-related articles, tweets, and media
-- Store media items with title, URL, type (article/tweet/other), and description
-- Allow admin to add/edit/delete media items
-- Display media items in a clean, organized way
-- Auto-detect content type from URL
-- Rich tweet embeds
-- Article summaries using AI
+- Public IP: 146.235.225.150
+- Username: opc
+- OS: Oracle Linux 8.10
+- Instance Type: VM.Standard.E2.1.Micro (1 OCPU, 1GB RAM)
+
+### Required Setup:
+
+1. Install Docker and Docker Compose
+2. Configure firewall to allow port 7700
+3. Set up Meilisearch container
+4. Verify the setup
 
 ### Implementation Steps:
 
-[X] Plan database schema and UI components
-[X] Create database table for media items
-[X] Create API endpoints for media CRUD operations
-[X] Add Media tab UI and components
-[X] Implement media item management functionality
-[X] Add auto-detection of content type
-[X] Add rich tweet embeds
-[X] Add article summarization
+[ ] SSH into the server
+[ ] Install Docker and Docker Compose
+[ ] Create docker-compose.yml
+[ ] Configure firewall
+[ ] Start Meilisearch container
+[ ] Test the setup
 
-### Database Schema (media_items):
+### Environment Variables:
 
-```sql
-create table media_items (
-  id uuid default uuid_generate_v4() primary key,
-  title text not null,
-  url text not null,
-  description text,
-  type text not null check (type in ('article', 'tweet', 'other')),
-  embed_html text, -- For storing tweet embed HTML
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+- MEILI_MASTER_KEY=masterKey
+- Host URL: http://146.235.225.150:7700
 
--- Add RLS policies
-alter table media_items enable row level security;
+### Notes:
 
--- Allow anyone to read media items
-create policy "Media items are viewable by everyone"
-  on media_items for select
-  using (true);
-
--- Allow only authenticated users to insert media items
-create policy "Authenticated users can insert media items"
-  on media_items for insert
-  with check (auth.role() = 'authenticated');
-
--- Allow only authenticated users to update their media items
-create policy "Authenticated users can update media items"
-  on media_items for update
-  using (auth.role() = 'authenticated');
-
--- Allow only authenticated users to delete their media items
-create policy "Authenticated users can delete media items"
-  on media_items for delete
-  using (auth.role() = 'authenticated');
-```
-
-### Components Created:
-
-1. MediaItem.tsx - Individual media item display with rich tweet embeds
-2. AddMediaModal.tsx - Simplified modal for URL input only
-3. DeleteMediaModal.tsx - Confirmation modal for deletion
-4. API routes for media items CRUD operations
-5. Process endpoint for auto-detecting and processing content
-<cursor-tools Integration>
-# Instructions
-Use the following commands to get AI assistance:
-
-**Web Search:**
-`cursor-tools web "<your question>"` - Get answers from the web using Perplexity AI (e.g., `cursor-tools web "latest weather in London"`)
-when using web for complex queries suggest writing the output to a file somewhere like local-research/<query summary>.md.
-
-**Repository Context:**
-`cursor-tools repo "<your question>"` - Get context-aware answers about this repository using Google Gemini (e.g., `cursor-tools repo "explain authentication flow"`)
-
-**Documentation Generation:**
-`cursor-tools doc [options]` - Generate comprehensive documentation for this repository (e.g., `cursor-tools doc --output docs.md`)
-when using doc for remote repos suggest writing the output to a file somewhere like local-docs/<repo-name>.md.
-
-**GitHub Information:**
-`cursor-tools github pr [number]` - Get the last 10 PRs, or a specific PR by number (e.g., `cursor-tools github pr 123`)
-`cursor-tools github issue [number]` - Get the last 10 issues, or a specific issue by number (e.g., `cursor-tools github issue 456`)
-
-**Browser Automation (Stateless):**
-`cursor-tools browser open <url> [options]` - Open a URL and capture page content, console logs, and network activity (e.g., `cursor-tools browser open "https://example.com" --html`)
-`cursor-tools browser act "<instruction>" --url=<url> [options]` - Execute actions on a webpage using natural language instructions (e.g., `cursor-tools browser act "Click Login" --url=https://example.com`)
-`cursor-tools browser observe "<instruction>" --url=<url> [options]` - Observe interactive elements on a webpage and suggest possible actions (e.g., `cursor-tools browser observe "interactive elements" --url=https://example.com`)
-`cursor-tools browser extract "<instruction>" --url=<url> [options]` - Extract data from a webpage based on natural language instructions (e.g., `cursor-tools browser extract "product names" --url=https://example.com/products`)
-
-**Notes on Browser Commands:**
-- All browser commands are stateless: each command starts with a fresh browser instance and closes it when done.
-- When using `--connect-to`, special URL values are supported:
-  - `current`: Use the existing page without reloading
-  - `reload-current`: Use the existing page and refresh it (useful in development)
-- Multi step workflows involving state or combining multiple actions are supported in the `act` command using the pipe (|) separator (e.g., `cursor-tools browser act "Click Login | Type 'user@example.com' into email | Click Submit" --url=https://example.com`)
-- Video recording is available for all browser commands using the `--video=<directory>` option. This will save a video of the entire browser interaction at 1280x720 resolution. The video file will be saved in the specified directory with a timestamp.
-- DO NOT ask browser act to "wait" for anything, the wait command is currently disabled in Stagehand.
-
-**Tool Recommendations:**
-- `cursor-tools web` is best for general web information not specific to the repository.
-- `cursor-tools repo` is ideal for repository-specific questions, planning, code review and debugging.
-- `cursor-tools doc` generates documentation for local or remote repositories.
-- `cursor-tools browser` is useful for testing and debugging web apps.
-
-**Running Commands:**
-1. **Installed version:** Use `cursor-tools <command>` (if in PATH) or `npm exec cursor-tools "<command>"`, `yarn cursor-tools "<command>"`, `pnpm cursor-tools "<command>"`.
-2. **Without installation:** Use `npx -y cursor-tools@latest "<command>"` or `bunx -y cursor-tools@latest "<command>"`.
-
-**General Command Options (Supported by all commands):**
---model=<model name>: Specify an alternative AI model to use
---max-tokens=<number>: Control response length
---save-to=<file path>: Save command output to a file (in *addition* to displaying it)
---help: View all available options (help is not fully implemented yet)
-
-**Documentation Command Options:**
---from-github=<GitHub username>/<repository name>[@<branch>]: Generate documentation for a remote GitHub repository
-
-**GitHub Command Options:**
---from-github=<GitHub username>/<repository name>[@<branch>]: Access PRs/issues from a specific GitHub repository
-
-**Browser Command Options (for 'open', 'act', 'observe', 'extract'):**
---console: Capture browser console logs (enabled by default, use --no-console to disable)
---html: Capture page HTML content
---network: Capture network activity (enabled by default, use --no-network to disable)
---screenshot=<file path>: Save a screenshot of the page
---timeout=<milliseconds>: Set navigation timeout (default: 30000ms)
---viewport=<width>x<height>: Set viewport size (e.g., 1280x720). When using --connect-to, viewport is only changed if this option is explicitly provided
---headless: Run browser in headless mode (default: true)
---no-headless: Show browser UI (non-headless mode) for debugging
---connect-to=<port>: Connect to existing Chrome instance
---wait=<duration or selector>: Wait after page load (e.g., '5s', '#element-id', 'selector:.my-class')
---video=<directory>: Save a video recording of the browser interaction to the specified directory (1280x720 resolution). Not available when using --connect-to
-
-**Additional Notes:**
-- For detailed information, see `node_modules/cursor-tools/README.md` (if installed locally).
-- Configuration is in `cursor-tools.config.json` (or `~/.cursor-tools/config.json`).
-- API keys are loaded from `.cursor-tools.env` (or `~/.cursor-tools/.env`).
-- Browser commands require separate installation of Playwright: `npm install --save-dev playwright` or `npm install -g playwright`.
-- **Remember:** You're part of a team of superhuman expert AIs. Work together to solve complex problems.
-<!-- cursor-tools-version: 0.5.0 -->
-</cursor-tools Integration>
+- Need to ensure data persistence through Docker volumes
+- Need to secure the Meilisearch instance with master key
+- Need to configure firewall rules for port 7700
