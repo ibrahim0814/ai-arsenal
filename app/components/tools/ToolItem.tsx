@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { EditToolModal } from "./EditToolModal";
 import { Badge } from "@/components/ui/badge";
 import { formatTagLabel } from "@/lib/utils";
 import { Tool } from "@/types/tool";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ToolItemProps {
   tool: Tool;
@@ -34,9 +40,37 @@ export default function ToolItem({
     await onDelete(tool.id);
   };
 
+  const renderActions = () => (
+    <div className="absolute top-2 right-2 z-10">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm hover:bg-white"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-red-600"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
   return (
     <div className="w-full border rounded-lg p-4 bg-white relative">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      {isAdmin && renderActions()}
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
             <a
@@ -70,28 +104,6 @@ export default function ToolItem({
             ))}
           </div>
         </div>
-        {isAdmin && (
-          <div className="flex sm:flex-col items-center sm:items-end gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsEditModalOpen(true)}
-              className="text-blue-500 hover:text-blue-700"
-            >
-              <Edit className="h-4 w-4" />
-              <span className="sr-only">Edit</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="text-red-500 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </div>
-        )}
       </div>
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
