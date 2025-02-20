@@ -43,7 +43,15 @@ export default function DailySummaryCard({
   onDeleteMedia,
 }: DailySummaryCardProps) {
   const formatDate = (dateString: string) => {
-    return formatPacificDateVeryShort(dateString);
+    const date = new Date(dateString);
+    // Add 8 hours to match Pacific time
+    date.setHours(date.getHours() + 8);
+    const weekday = date.toLocaleString("en-US", { weekday: "short" });
+    const monthDay = date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    return `${weekday} ${monthDay}`;
   };
 
   // Convert dates to Pacific timezone for comparison

@@ -72,7 +72,13 @@ export function MediaGrid({
     <div className="space-y-4">
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <SortableContext items={items} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div
+            className={`grid gap-6 ${
+              items.length > 0 && items[0].type === "tweet"
+                ? "grid-cols-1 max-w-2xl mx-auto"
+                : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+            }`}
+          >
             {items.map((item) => (
               <SortableMediaItem
                 key={item.id}
