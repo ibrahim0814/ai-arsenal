@@ -91,9 +91,9 @@ export function MainContent({
   groupContentByDate,
 }: MainContentProps) {
   return (
-    <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-6`}>
+    <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
       <Tabs value={activeTab} onValueChange={onTabChange}>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
           <div className="flex flex-col sm:flex-row sm:justify-between w-full">
             <TabsList className="flex overflow-x-auto">
               <TabsTrigger value="tools" className="min-w-[100px]">
