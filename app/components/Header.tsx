@@ -140,6 +140,7 @@ export function Header({
         ) : (
           <>
             <Button
+              variant="outline"
               size="icon"
               onClick={onOpenLogin}
               className="sm:hidden"
