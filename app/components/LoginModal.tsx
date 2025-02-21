@@ -80,10 +80,10 @@ export function LoginModal({ open, onClose, onLoginSuccess }: LoginModalProps) {
           </div>
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button variant="outline" type="submit" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Login"}
             </Button>
           </DialogFooter>

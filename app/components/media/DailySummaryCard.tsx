@@ -57,9 +57,9 @@ export default function DailySummaryCard({
   );
 
   return (
-    <div className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div className="w-full border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
       <div className="p-3">
-        <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-2">
+        <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-2">
           <Calendar className="h-3 w-3" />
           <span>{formatDate(date)}</span>
         </div>

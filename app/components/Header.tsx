@@ -14,6 +14,7 @@ import {
   StickyNote,
   LogIn,
 } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 
 interface HeaderProps {
   isUserAdmin: boolean;
@@ -39,11 +40,17 @@ export function Header({
         <span className="text-2xl sm:text-3xl ml-1.5 sm:ml-2 -mt-1">⚔️</span>
       </div>
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         {isUserAdmin && (
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="icon" className="sm:hidden" title="Add Item">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="sm:hidden"
+                  title="Add Item"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -65,6 +72,7 @@ export function Header({
 
             {user && (
               <Button
+                variant="outline"
                 onClick={onOpenAddNote}
                 size="icon"
                 className="sm:hidden"
@@ -76,7 +84,7 @@ export function Header({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="hidden sm:flex">
+                <Button variant="outline" className="hidden sm:flex">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Item
                 </Button>
@@ -98,7 +106,11 @@ export function Header({
             </DropdownMenu>
 
             {user && (
-              <Button onClick={onOpenAddNote} className="hidden sm:flex">
+              <Button
+                variant="outline"
+                onClick={onOpenAddNote}
+                className="hidden sm:flex"
+              >
                 <StickyNote className="h-4 w-4 mr-2" />
                 Quick Note
               </Button>
@@ -122,7 +134,7 @@ export function Header({
               className="hidden sm:flex"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+              Log Off
             </Button>
           </>
         ) : (
@@ -135,7 +147,11 @@ export function Header({
             >
               <LogIn className="h-4 w-4 rotate-180" />
             </Button>
-            <Button onClick={onOpenLogin} className="hidden sm:flex">
+            <Button
+              variant="outline"
+              onClick={onOpenLogin}
+              className="hidden sm:flex"
+            >
               Sign In
             </Button>
           </>

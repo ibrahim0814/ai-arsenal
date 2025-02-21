@@ -369,7 +369,7 @@ export function EditToolModal({
                                     : "opacity-0"
                                 )}
                               />
-                              <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
+                              <span className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
                                 {formatTagLabel(tag)}
                               </span>
                             </CommandItem>

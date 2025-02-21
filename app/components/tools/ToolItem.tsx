@@ -47,7 +47,7 @@ export default function ToolItem({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm hover:bg-white"
+            className="h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -57,7 +57,7 @@ export default function ToolItem({
             Edit
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-red-600"
+            className="text-red-600 dark:text-red-400"
             onClick={() => setIsDeleteDialogOpen(true)}
           >
             Delete
@@ -68,7 +68,7 @@ export default function ToolItem({
   );
 
   return (
-    <div className="w-full border rounded-lg p-4 bg-white relative">
+    <div className="w-full border rounded-lg p-4 bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 relative">
       {isAdmin && renderActions()}
       <div className="flex flex-col sm:flex-row sm:items-start gap-3">
         <div className="flex-1">
@@ -77,18 +77,18 @@ export default function ToolItem({
               href={tool.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline text-lg font-medium"
+              className="text-blue-600 dark:text-blue-400 hover:underline text-lg font-medium"
             >
               {tool.title}
             </a>
             {tool.is_personal_tool && (
-              <Badge className="bg-blue-100 text-blue-800 w-fit">
+              <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 w-fit">
                 Current Stack
               </Badge>
             )}
           </div>
           {tool.description && (
-            <p className="text-gray-500 mt-1 mb-3 text-sm">
+            <p className="text-muted-foreground mt-1 mb-3 text-sm">
               {tool.description}
             </p>
           )}
@@ -97,7 +97,7 @@ export default function ToolItem({
               <Badge
                 key={tag}
                 variant="secondary"
-                className="text-xs bg-gray-100 text-gray-800"
+                className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300"
               >
                 {formatTagLabel(tag)}
               </Badge>

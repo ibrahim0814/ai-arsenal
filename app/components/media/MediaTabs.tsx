@@ -136,11 +136,11 @@ export function MediaTabs({
       </TabsContent>
 
       <TabsContent value="notes">
-        <div className="border rounded-lg bg-white overflow-hidden">
-          <div className="bg-gray-50/80 px-4 py-3 border-b">
+        <div className="border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 overflow-hidden">
+          <div className="bg-gray-50/80 dark:bg-gray-800/50 px-4 py-3 border-b dark:border-gray-800">
             <h2 className="text-lg font-medium flex items-center justify-center gap-2">
-              <span className="text-gray-800">🗒️</span>
-              <span>Notes</span>
+              <span className="text-gray-800 dark:text-gray-300">🗒️</span>
+              <span className="dark:text-gray-200">Notes</span>
             </h2>
           </div>
           <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">

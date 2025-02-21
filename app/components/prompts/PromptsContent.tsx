@@ -45,15 +45,15 @@ export function PromptsContent({
       {prompts.map((prompt) => (
         <div
           key={prompt.id}
-          className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+          className="w-full border rounded-lg bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow"
         >
           <div className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="text-xl font-semibold text-foreground">
                   {prompt.title}
                 </h3>
-                <p className="text-sm font-medium text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {prompt.type === "operator"
                     ? "🤖 Operator Agent"
                     : "💭 Normal Prompt"}
