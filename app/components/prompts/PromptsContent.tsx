@@ -123,22 +123,7 @@ export function PromptsContent({
                   </pre>
                 </div>
                 {prompt.content.split("\n").length > 5 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 w-full flex items-center justify-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => togglePromptExpansion(prompt.id)}
-                  >
-                    {expandedPrompts[prompt.id] ? (
-                      <>
-                        Show Less <ChevronUp className="h-4 w-4" />
-                      </>
-                    ) : (
-                      <>
-                        Show More <ChevronDown className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
+                  <div className="h-6" />
                 )}
               </div>
               <Button
@@ -167,6 +152,20 @@ export function PromptsContent({
                   <Copy className="h-4 w-4" />
                 )}
               </Button>
+              {prompt.content.split("\n").length > 5 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="absolute top-14 right-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700"
+                  onClick={() => togglePromptExpansion(prompt.id)}
+                >
+                  {expandedPrompts[prompt.id] ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </div>

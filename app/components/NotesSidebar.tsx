@@ -46,6 +46,10 @@ export function NotesSidebar({
         <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
           {isLoading ? (
             <NoteSkeleton />
+          ) : notes.length === 0 ? (
+            <div className="text-center text-muted-foreground py-4">
+              No notes yet
+            </div>
           ) : (
             notes.map((note) => (
               <NoteComponent

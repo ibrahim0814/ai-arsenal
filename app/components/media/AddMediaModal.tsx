@@ -220,11 +220,12 @@ export function AddMediaModal({
           </div>
 
           <div className="p-6 flex justify-end gap-2 mt-auto">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
             <Button
               type="submit"
+              variant="secondary"
               disabled={isProcessing || isLoadingPreview || !preview}
             >
               {isProcessing ? (

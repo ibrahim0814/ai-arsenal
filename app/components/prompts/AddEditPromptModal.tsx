@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface PromptFormModalProps {
+interface AddEditPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (title: string, content: string, type: string) => Promise<void>;
@@ -35,14 +35,14 @@ interface PromptFormModalProps {
   isProcessing?: boolean;
 }
 
-export function PromptFormModal({
+export function AddEditPromptModal({
   isOpen,
   onClose,
   onSubmit,
   initialData,
   mode,
   isProcessing,
-}: PromptFormModalProps) {
+}: AddEditPromptModalProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [content, setContent] = useState(initialData?.content || "");
   const [type, setType] = useState(initialData?.type || "");
@@ -114,13 +114,13 @@ export function PromptFormModal({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={onClose}
               disabled={isProcessing}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isProcessing}>
+            <Button type="submit" variant="secondary" disabled={isProcessing}>
               {isProcessing ? (
                 <span className="flex items-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

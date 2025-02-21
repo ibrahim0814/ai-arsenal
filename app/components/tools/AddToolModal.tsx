@@ -525,10 +525,10 @@ export function AddToolModal({ open, onClose, onAdd }: AddToolModalProps) {
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button variant="secondary" type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Adding Tool..." : "Add Tool"}
             </Button>
           </DialogFooter>

@@ -417,10 +417,10 @@ export function EditToolModal({
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" variant="secondary" disabled={isSubmitting}>
               {isSubmitting ? "Saving Changes..." : "Save Changes"}
             </Button>
           </DialogFooter>

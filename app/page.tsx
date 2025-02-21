@@ -26,9 +26,9 @@ const AddToolModal = lazy(() =>
     default: mod.AddToolModal,
   }))
 );
-const PromptFormModal = lazy(() =>
-  import("./components/prompts/PromptFormModal").then((mod) => ({
-    default: mod.PromptFormModal,
+const AddEditPromptModal = lazy(() =>
+  import("./components/prompts/AddEditPromptModal").then((mod) => ({
+    default: mod.AddEditPromptModal,
   }))
 );
 const DeletePromptModal = lazy(() =>
@@ -46,14 +46,9 @@ const DeleteMediaModal = lazy(() =>
     default: mod.DeleteMediaModal,
   }))
 );
-const AddNoteModal = lazy(() =>
-  import("./components/media/AddNoteModal").then((mod) => ({
-    default: mod.AddNoteModal,
-  }))
-);
-const EditNoteModal = lazy(() =>
-  import("./components/media/EditNoteModal").then((mod) => ({
-    default: mod.EditNoteModal,
+const AddEditNoteModal = lazy(() =>
+  import("./components/media/AddEditNoteModal").then((mod) => ({
+    default: mod.AddEditNoteModal,
   }))
 );
 const DeleteNoteModal = lazy(() =>
@@ -69,12 +64,14 @@ export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
+  const [notesLoading, setNotesLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
     {}
   );
   const [error, setError] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [targetTab, setTargetTab] = useState<string>("tools");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
@@ -153,6 +150,7 @@ export default function Home() {
   }
 
   async function fetchNotes() {
+    setNotesLoading(true);
     try {
       const response = await fetch("/api/notes");
       if (!response.ok) {
@@ -164,6 +162,8 @@ export default function Home() {
       );
     } catch (error) {
       console.error("Error fetching notes:", error);
+    } finally {
+      setNotesLoading(false);
     }
   }
 
@@ -815,7 +815,7 @@ export default function Home() {
         onSignOut={handleSignOut}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onOpenAddModal={(tab) => {
-          setActiveTab(tab);
+          setTargetTab(tab);
           setIsAddModalOpen(true);
         }}
         onOpenAddNote={() => setIsAddNoteModalOpen(true)}
@@ -889,7 +889,7 @@ export default function Home() {
                 setIsDeleteNoteModalOpen(true);
               }
             }}
-            isLoading={contentLoading}
+            isLoading={loading || contentLoading || notesLoading}
           />
         )}
       </div>
@@ -912,7 +912,7 @@ export default function Home() {
           />
         )}
 
-        {isAddModalOpen && activeTab === "tools" && (
+        {isAddModalOpen && targetTab === "tools" && (
           <AddToolModal
             open={isAddModalOpen}
             onClose={() => setIsAddModalOpen(false)}
@@ -920,8 +920,8 @@ export default function Home() {
           />
         )}
 
-        {isAddModalOpen && activeTab === "prompts" && (
-          <PromptFormModal
+        {isAddModalOpen && targetTab === "prompts" && (
+          <AddEditPromptModal
             isOpen={isAddModalOpen}
             onClose={() => setIsAddModalOpen(false)}
             onSubmit={handleAddPrompt}
@@ -930,7 +930,7 @@ export default function Home() {
           />
         )}
 
-        {isAddModalOpen && activeTab === "media" && (
+        {isAddModalOpen && targetTab === "media" && (
           <AddMediaModal
             isOpen={isAddModalOpen}
             onClose={() => setIsAddModalOpen(false)}
@@ -942,7 +942,7 @@ export default function Home() {
         )}
 
         {selectedPrompt && isEditModalOpen && (
-          <PromptFormModal
+          <AddEditPromptModal
             isOpen={isEditModalOpen}
             onClose={() => {
               setIsEditModalOpen(false);
@@ -996,16 +996,17 @@ export default function Home() {
         )}
 
         {isAddNoteModalOpen && (
-          <AddNoteModal
+          <AddEditNoteModal
             isOpen={isAddNoteModalOpen}
             onClose={() => setIsAddNoteModalOpen(false)}
             onSubmit={handleAddNote}
             isProcessing={isProcessing}
+            mode="add"
           />
         )}
 
         {selectedNote && isEditNoteModalOpen && (
-          <EditNoteModal
+          <AddEditNoteModal
             isOpen={isEditNoteModalOpen}
             onClose={() => {
               setIsEditNoteModalOpen(false);
@@ -1014,6 +1015,7 @@ export default function Home() {
             onSubmit={handleEditNote}
             initialContent={selectedNote.content}
             isProcessing={processingIds[selectedNote.id]}
+            mode="edit"
           />
         )}
 
