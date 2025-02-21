@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { PromptFormModal } from "./PromptFormModal";
+import { AddEditPromptModal } from "./AddEditPromptModal";
 import { DeletePromptModal } from "./DeletePromptModal";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -209,7 +209,7 @@ export function PromptList({ prompts: initialPrompts }: { prompts: Prompt[] }) {
         ))}
       </div>
 
-      <PromptFormModal
+      <AddEditPromptModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAdd}
@@ -217,7 +217,7 @@ export function PromptList({ prompts: initialPrompts }: { prompts: Prompt[] }) {
       />
       {selectedPrompt && (
         <>
-          <PromptFormModal
+          <AddEditPromptModal
             isOpen={isEditModalOpen}
             onClose={() => {
               setIsEditModalOpen(false);
