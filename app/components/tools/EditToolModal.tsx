@@ -243,187 +243,192 @@ export function EditToolModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle>Edit Tool</DialogTitle>
           <DialogDescription>
             Edit the details of the AI tool.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 py-4">
-            {/* URL Section */}
-            <div className="space-y-2">
-              <Label htmlFor="link" className="block">
-                URL
-              </Label>
-              <Input
-                id="link"
-                type="url"
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                className="w-full"
-                required
-              />
-              <div className="flex gap-2 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={regenerateAll}
-                  disabled={isGenerating || !link}
-                  className="flex-1 h-9"
-                >
-                  <Wand2
-                    className={cn(
-                      "h-3.5 w-3.5 mr-1.5",
-                      isGenerating && "animate-spin"
-                    )}
-                  />
-                  OpenAI
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={generateWithPerplexity}
-                  disabled={isGeneratingPerplexity || !link}
-                  className="flex-1 h-9"
-                >
-                  <Wand2
-                    className={cn(
-                      "h-3.5 w-3.5 mr-1.5",
-                      isGeneratingPerplexity && "animate-spin"
-                    )}
-                  />
-                  Perplexity
-                </Button>
-              </div>
-            </div>
-
-            {/* Title and Description Section */}
-            <div className="space-y-4 bg-gray-50 dark:bg-gray-900 dark:border-gray-800 rounded-lg p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto px-6">
+            <div className="grid gap-6 py-4">
+              {/* URL Section */}
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="link" className="block">
+                  URL
+                </Label>
                 <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  id="link"
+                  type="url"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  className="w-full"
                   required
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Tags and Settings */}
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-2 block">Tags</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-between"
-                    >
-                      {selectedTags.length === 0
-                        ? "Select tags..."
-                        : `${selectedTags.length} selected`}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[200px] p-0"
-                    style={{ overflowY: "auto" }}
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={regenerateAll}
+                    disabled={isGenerating || !link}
+                    className="flex-1 h-9"
                   >
-                    <Command>
-                      <CommandInput placeholder="Search tags..." />
-                      <CommandList style={{ maxHeight: "300px" }}>
-                        <CommandEmpty>No tags found.</CommandEmpty>
-                        <CommandGroup>
-                          {availableTags.map((tag) => (
-                            <CommandItem
-                              key={tag}
-                              onSelect={() => {
-                                setSelectedTags((prev) =>
-                                  prev.includes(tag)
-                                    ? prev.filter((t) => t !== tag)
-                                    : [...prev, tag]
-                                );
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedTags.includes(tag)
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              <span className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
-                                {formatTagLabel(tag)}
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {selectedTags.length > 0 && (
-                  <div className="flex gap-1 flex-wrap mt-2">
-                    {selectedTags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="text-xs bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        onClick={() =>
-                          setSelectedTags((prev) =>
-                            prev.filter((t) => t !== tag)
-                          )
-                        }
-                      >
-                        {formatTagLabel(tag)}
-                        <X className="ml-1 h-3 w-3" />
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                    <Wand2
+                      className={cn(
+                        "h-3.5 w-3.5 mr-1.5",
+                        isGenerating && "animate-spin"
+                      )}
+                    />
+                    OpenAI
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateWithPerplexity}
+                    disabled={isGeneratingPerplexity || !link}
+                    className="flex-1 h-9"
+                  >
+                    <Wand2
+                      className={cn(
+                        "h-3.5 w-3.5 mr-1.5",
+                        isGeneratingPerplexity && "animate-spin"
+                      )}
+                    />
+                    Perplexity
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="personal-tool"
-                  checked={isPersonalTool}
-                  onCheckedChange={setIsPersonalTool}
-                />
-                <Label htmlFor="personal-tool">Add to Current Stack</Label>
+
+              {/* Title and Description Section */}
+              <div className="space-y-4 bg-gray-50 dark:bg-gray-900 dark:border-gray-800 rounded-lg p-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Tags and Settings */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block">Tags</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {selectedTags.length === 0
+                          ? "Select tags..."
+                          : `${selectedTags.length} selected`}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[200px] p-0"
+                      style={{ overflowY: "auto" }}
+                    >
+                      <Command>
+                        <CommandInput placeholder="Search tags..." />
+                        <CommandList style={{ maxHeight: "300px" }}>
+                          <CommandEmpty>No tags found.</CommandEmpty>
+                          <CommandGroup>
+                            {availableTags.map((tag) => (
+                              <CommandItem
+                                key={tag}
+                                onSelect={() => {
+                                  setSelectedTags((prev) =>
+                                    prev.includes(tag)
+                                      ? prev.filter((t) => t !== tag)
+                                      : [...prev, tag]
+                                  );
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedTags.includes(tag)
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                <span className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">
+                                  {formatTagLabel(tag)}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {selectedTags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {selectedTags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="text-xs bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          onClick={() =>
+                            setSelectedTags((prev) =>
+                              prev.filter((t) => t !== tag)
+                            )
+                          }
+                        >
+                          {formatTagLabel(tag)}
+                          <X className="ml-1 h-3 w-3" />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="personal-tool"
+                    checked={isPersonalTool}
+                    onCheckedChange={setIsPersonalTool}
+                  />
+                  <Label htmlFor="personal-tool">Add to Current Stack</Label>
+                </div>
               </div>
             </div>
+
+            {error && (
+              <div className="mt-2 mb-4">
+                <p className="text-red-500 text-sm">{error}</p>
+              </div>
+            )}
           </div>
 
-          {error && (
-            <div className="mt-2 mb-4">
-              <p className="text-red-500 text-sm">{error}</p>
-            </div>
-          )}
-
-          <DialogFooter>
+          <div className="p-6 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-auto border-t">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" variant="secondary" disabled={isSubmitting}>
               {isSubmitting ? "Saving Changes..." : "Save Changes"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
