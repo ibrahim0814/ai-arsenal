@@ -12,9 +12,6 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableMediaItem } from "./SortableMediaItem";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Newspaper, Twitter, Youtube, LayoutGrid } from "lucide-react";
 
 interface MediaItem {
   id: string;

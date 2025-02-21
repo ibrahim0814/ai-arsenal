@@ -4,47 +4,20 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Tool } from "../types/tool";
 import { LoginModal } from "./components/LoginModal";
 import { getCurrentUser, isAdmin, signOut } from "../utils/auth";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Plus,
-  LogOut,
-  Wrench,
-  FileText,
-  Copy,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  Loader2,
-  Newspaper,
-  LayoutGrid,
-  Twitter,
-  Youtube,
-  StickyNote,
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Header } from "./components/Header";
+import { MainContent } from "./components/MainContent";
+import { NotesSidebar } from "./components/NotesSidebar";
+import { AddToolModal } from "./components/tools/AddToolModal";
 import { PromptFormModal } from "./components/prompts/PromptFormModal";
 import { DeletePromptModal } from "./components/prompts/DeletePromptModal";
-import { AddToolModal } from "./components/tools/AddToolModal";
-import ToolItem from "./components/tools/ToolItem";
 import { AddMediaModal } from "./components/media/AddMediaModal";
 import { DeleteMediaModal } from "./components/media/DeleteMediaModal";
-import MediaItem from "./components/media/MediaItem";
-import { MediaGrid } from "./components/media/MediaGrid";
-import DailySummaryCard from "./components/media/DailySummaryCard";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { AddNoteModal } from "./components/media/AddNoteModal";
-import Note from "./components/media/Note";
 import { EditNoteModal } from "./components/media/EditNoteModal";
 import { DeleteNoteModal } from "./components/media/DeleteNoteModal";
-import { SearchBar } from "./components/tools/SearchBar";
 import { indexTools } from "@/lib/meilisearch";
-import { toPacificDate, formatPacificDate } from "@/utils/date";
+import { toPacificDate } from "@/utils/date";
 
 interface Prompt {
   id: string;
@@ -92,10 +65,6 @@ export default function Home() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [expandedPrompts, setExpandedPrompts] = useState<
-    Record<string, boolean>
-  >({});
-  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
   const [selectedMediaItem, setSelectedMediaItem] = useState<MediaItem | null>(
     null
   );
@@ -494,13 +463,6 @@ export default function Home() {
     }
   }
 
-  const togglePromptExpansion = (promptId: string) => {
-    setExpandedPrompts((prev) => ({
-      ...prev,
-      [promptId]: !prev[promptId],
-    }));
-  };
-
   async function handleAddMediaItem(
     title: string,
     url: string,
@@ -614,7 +576,6 @@ export default function Home() {
   const groupContentByDate = (mediaItems: MediaItem[], notes: Note[]) => {
     const groups: { [key: string]: (MediaItem | Note)[] } = {};
 
-    // Helper function to add item to the appropriate date group
     const addToGroup = (item: MediaItem | Note) => {
       const date = toPacificDate(item.created_at);
       const dateKey = date.toLocaleDateString("en-US", {
@@ -631,15 +592,13 @@ export default function Home() {
       groups[dateKey].push(item);
     };
 
-    // Add all items to their respective date groups
     mediaItems.forEach(addToGroup);
     notes
       .map((note) => ({ ...note, type: "note" as const }))
       .forEach(addToGroup);
 
-    // Sort dates and items within each date
     return Object.entries(groups)
-      .filter(([_, items]) => items.length > 0) // Only keep groups with items
+      .filter(([_, items]) => items.length > 0)
       .sort(([dateA], [dateB]) => {
         const dateAObj = toPacificDate(groups[dateA][0].created_at);
         const dateBObj = toPacificDate(groups[dateB][0].created_at);
@@ -704,559 +663,83 @@ export default function Home() {
 
   return (
     <main className="container mx-auto px-4 sm:px-8 pt-4 sm:pt-10 pb-6">
-      <div className="flex justify-between items-center gap-4 mb-6">
-        <div className="flex items-center ml-2">
-          <h1 className="text-xl sm:text-2xl font-bold">AI Arsenal</h1>
-          <span className="text-2xl sm:text-3xl ml-1.5 sm:ml-2 -mt-1">⚔️</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {isUserAdmin && (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon" className="sm:hidden" title="Add Item">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setActiveTab("tools");
-                      setIsAddModalOpen(true);
-                    }}
-                  >
-                    <Wrench className="h-4 w-4 mr-2" />
-                    Add Tool
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setActiveTab("prompts");
-                      setIsAddModalOpen(true);
-                    }}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Add Prompt
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setActiveTab("media");
-                      setIsAddModalOpen(true);
-                    }}
-                  >
-                    <Newspaper className="h-4 w-4 mr-2" />
-                    Add Media
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {user && (
-                <Button
-                  onClick={() => setIsAddNoteModalOpen(true)}
-                  size="icon"
-                  className="sm:hidden"
-                  title="Quick Note"
-                >
-                  <StickyNote className="h-4 w-4" />
-                </Button>
-              )}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="hidden sm:flex">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Item
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setActiveTab("tools");
-                      setIsAddModalOpen(true);
-                    }}
-                  >
-                    <Wrench className="h-4 w-4 mr-2" />
-                    Add Tool
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setActiveTab("prompts");
-                      setIsAddModalOpen(true);
-                    }}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Add Prompt
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setActiveTab("media");
-                      setIsAddModalOpen(true);
-                    }}
-                  >
-                    <Newspaper className="h-4 w-4 mr-2" />
-                    Add Media
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {user && (
-                <Button
-                  onClick={() => setIsAddNoteModalOpen(true)}
-                  className="hidden sm:flex"
-                >
-                  <StickyNote className="h-4 w-4 mr-2" />
-                  Quick Note
-                </Button>
-              )}
-            </>
-          )}
-          {user ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                className="sm:hidden"
-                title="Sign Out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSignOut}
-                className="hidden sm:flex"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                size="icon"
-                onClick={() => setIsLoginModalOpen(true)}
-                className="sm:hidden"
-                title="Sign In"
-              >
-                <LogOut className="h-4 w-4 rotate-180" />
-              </Button>
-              <Button
-                onClick={() => setIsLoginModalOpen(true)}
-                className="hidden sm:flex"
-              >
-                Sign In
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <Header
+        isUserAdmin={isUserAdmin}
+        user={user}
+        onSignOut={handleSignOut}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenAddModal={(tab) => {
+          setActiveTab(tab);
+          setIsAddModalOpen(true);
+        }}
+        onOpenAddNote={() => setIsAddNoteModalOpen(true)}
+      />
 
       <div className={`flex flex-col ${user ? "lg:flex-row lg:gap-6" : ""}`}>
-        <div className={`w-full ${user ? "lg:w-[70%]" : ""}`}>
-          <Tabs defaultValue="tools" onValueChange={setActiveTab}>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-              <TabsList className="flex overflow-x-auto justify-start">
-                <TabsTrigger value="tools" className="min-w-[100px]">
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Tools
-                </TabsTrigger>
-                <TabsTrigger value="prompts" className="min-w-[100px]">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Prompts
-                </TabsTrigger>
-                <TabsTrigger value="media" className="min-w-[100px]">
-                  <Newspaper className="h-4 w-4 mr-2" />
-                  Media
-                </TabsTrigger>
-              </TabsList>
-              {activeTab === "tools" && (
-                <div className="w-full sm:w-auto sm:ml-auto">
-                  <SearchBar
-                    onSearch={handleSearch}
-                    className="w-full sm:w-[300px]"
-                  />
-                </div>
-              )}
-            </div>
-
-            <TabsContent value="tools" className="space-y-4">
-              <div className="grid grid-cols-1 gap-2">
-                {isSearching ? (
-                  <div className="text-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                    <p className="text-sm text-gray-500 mt-2">
-                      Searching tools...
-                    </p>
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map((tool) => (
-                    <ToolItem
-                      key={tool.id}
-                      tool={tool}
-                      onEdit={editTool}
-                      onDelete={deleteTool}
-                      isAdmin={isUserAdmin}
-                    />
-                  ))
-                ) : searchResults.length === 0 && isSearching === false ? (
-                  tools.map((tool) => (
-                    <ToolItem
-                      key={tool.id}
-                      tool={tool}
-                      onEdit={editTool}
-                      onDelete={deleteTool}
-                      isAdmin={isUserAdmin}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">No tools found</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="prompts" className="grid grid-cols-1 gap-2">
-              {prompts.map((prompt) => (
-                <div
-                  key={prompt.id}
-                  className="w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          {prompt.title}
-                        </h3>
-                        <p className="text-sm font-medium text-gray-500 mt-1">
-                          {prompt.type === "operator"
-                            ? "🤖 Operator Agent"
-                            : "💭 Normal Prompt"}
-                        </p>
-                      </div>
-                      {isUserAdmin && (
-                        <div className="flex gap-2 ml-6">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={processingIds[prompt.id]}
-                            onClick={() => {
-                              setSelectedPrompt(prompt);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            {processingIds[prompt.id] ? (
-                              <span className="flex items-center">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Processing...
-                              </span>
-                            ) : (
-                              "Edit"
-                            )}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPrompt(prompt);
-                              setIsDeleteModalOpen(true);
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mx-4 mb-4">
-                    <div
-                      className={`bg-gray-50 p-2 rounded-lg relative ${
-                        prompt.content.split("\n").length <= 1 ? "pb-4" : "pb-3"
-                      }`}
-                    >
-                      <div className="pr-12">
-                        <div
-                          className={`overflow-hidden transition-all duration-300 ${
-                            !expandedPrompts[prompt.id] ? "max-h-[130px]" : ""
-                          }`}
-                        >
-                          <pre
-                            className={`text-sm font-mono whitespace-pre-wrap break-words px-3 pt-2 ${
-                              prompt.content.split("\n").length <= 1
-                                ? "pb-2"
-                                : "pb-3"
-                            }`}
-                          >
-                            {prompt.content}
-                          </pre>
-                        </div>
-                        {prompt.content.split("\n").length > 5 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-2 w-full flex items-center justify-center gap-1 hover:bg-gray-100"
-                            onClick={() => togglePromptExpansion(prompt.id)}
-                          >
-                            {expandedPrompts[prompt.id] ? (
-                              <>
-                                Show Less <ChevronUp className="h-4 w-4" />
-                              </>
-                            ) : (
-                              <>
-                                Show More <ChevronDown className="h-4 w-4" />
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm hover:bg-white"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(prompt.content);
-                            setCopiedPromptId(prompt.id);
-                            setTimeout(() => setCopiedPromptId(null), 2000);
-                          } catch (err) {
-                            console.error("Failed to copy text: ", err);
-                            toast({
-                              title: "Error",
-                              description: "Failed to copy prompt",
-                              variant: "destructive",
-                              duration: 2000,
-                            });
-                          }
-                        }}
-                      >
-                        {copiedPromptId === prompt.id ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </TabsContent>
-
-            <TabsContent value="media">
-              <Tabs defaultValue="all" className="w-full">
-                <div className="mb-2 flex">
-                  <TabsList className="flex overflow-x-auto">
-                    <TabsTrigger
-                      value="all"
-                      className="flex-1 sm:flex-none min-w-[60px]"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="article"
-                      className="flex-1 sm:flex-none min-w-[60px]"
-                    >
-                      <Newspaper className="h-4 w-4" />
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="tweet"
-                      className="flex-1 sm:flex-none min-w-[60px]"
-                    >
-                      <Twitter className="h-4 w-4" />
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="youtube"
-                      className="flex-1 sm:flex-none min-w-[60px]"
-                    >
-                      <Youtube className="h-4 w-4" />
-                    </TabsTrigger>
-                    {user && (
-                      <TabsTrigger
-                        value="notes"
-                        className="flex-1 sm:flex-none min-w-[60px]"
-                      >
-                        <StickyNote className="h-4 w-4" />
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-                </div>
-
-                <TabsContent value="all">
-                  <div className="space-y-3">
-                    {groupContentByDate(mediaItems, user ? notes : []).map(
-                      ({ date, items }) => (
-                        <DailySummaryCard
-                          key={date}
-                          date={date}
-                          items={items}
-                          isAdmin={isUserAdmin}
-                          onEditNote={(note) => {
-                            setSelectedNote({ ...note, type: "note" });
-                            setIsEditNoteModalOpen(true);
-                          }}
-                          onDeleteNote={(id) => {
-                            const note = notes.find((n) => n.id === id);
-                            if (note) {
-                              setSelectedNote({ ...note, type: "note" });
-                              setIsDeleteNoteModalOpen(true);
-                            }
-                          }}
-                          onEditMedia={(item) => {
-                            setSelectedMediaItem(item);
-                            setIsMediaModalOpen(true);
-                          }}
-                          onDeleteMedia={(id) => {
-                            const mediaItem = mediaItems.find(
-                              (i) => i.id === id
-                            );
-                            if (mediaItem) {
-                              setSelectedMediaItem(mediaItem);
-                              setIsDeleteMediaModalOpen(true);
-                            }
-                          }}
-                        />
-                      )
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="article">
-                  <div className="space-y-4">
-                    {mediaItems
-                      .filter((item) => item.type === "article")
-                      .map((item) => (
-                        <MediaItem
-                          key={item.id}
-                          item={item}
-                          isAdmin={isUserAdmin}
-                          onEdit={(item) => {
-                            setSelectedMediaItem(item);
-                            setIsMediaModalOpen(true);
-                          }}
-                          onDelete={(id) => {
-                            const mediaItem = mediaItems.find(
-                              (i) => i.id === id
-                            );
-                            if (mediaItem) {
-                              setSelectedMediaItem(mediaItem);
-                              setIsDeleteMediaModalOpen(true);
-                            }
-                          }}
-                        />
-                      ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="tweet">
-                  <MediaGrid
-                    items={mediaItems.filter((item) => item.type === "tweet")}
-                    onEdit={(item) => {
-                      setSelectedMediaItem(item);
-                      setIsMediaModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      const item = mediaItems.find((i) => i.id === id);
-                      if (item) {
-                        setSelectedMediaItem(item);
-                        setIsDeleteMediaModalOpen(true);
-                      }
-                    }}
-                    onReorder={setMediaItems}
-                    isAdmin={isUserAdmin}
-                  />
-                </TabsContent>
-
-                <TabsContent value="youtube">
-                  <div className="space-y-4">
-                    {mediaItems
-                      .filter((item) => item.type === "youtube")
-                      .map((item) => (
-                        <MediaItem
-                          key={item.id}
-                          item={item}
-                          isAdmin={isUserAdmin}
-                          onEdit={(item) => {
-                            setSelectedMediaItem(item);
-                            setIsMediaModalOpen(true);
-                          }}
-                          onDelete={(id) => {
-                            const mediaItem = mediaItems.find(
-                              (i) => i.id === id
-                            );
-                            if (mediaItem) {
-                              setSelectedMediaItem(mediaItem);
-                              setIsDeleteMediaModalOpen(true);
-                            }
-                          }}
-                        />
-                      ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="notes">
-                  <div className="border rounded-lg bg-white overflow-hidden">
-                    <div className="bg-gray-50/80 px-4 py-3 border-b">
-                      <h2 className="text-lg font-medium flex items-center justify-center gap-2">
-                        <span className="text-gray-800">🗒️</span>
-                        <span>Notes</span>
-                      </h2>
-                    </div>
-                    <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
-                      {notes.map((note) => (
-                        <Note
-                          key={note.id}
-                          note={note}
-                          isAdmin={isUserAdmin}
-                          onEdit={(note) => {
-                            setSelectedNote({ ...note, type: "note" });
-                            setIsEditNoteModalOpen(true);
-                          }}
-                          onDelete={(id) => {
-                            const note = notes.find((n) => n.id === id);
-                            if (note) {
-                              setSelectedNote({ ...note, type: "note" });
-                              setIsDeleteNoteModalOpen(true);
-                            }
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-          </Tabs>
-        </div>
+        <MainContent
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          tools={tools}
+          prompts={prompts}
+          mediaItems={mediaItems}
+          notes={notes}
+          searchResults={searchResults}
+          isSearching={isSearching}
+          processingIds={processingIds}
+          isAdmin={isUserAdmin}
+          user={user}
+          onSearch={handleSearch}
+          onEditTool={editTool}
+          onDeleteTool={deleteTool}
+          onEditPrompt={(prompt) => {
+            setSelectedPrompt(prompt);
+            setIsEditModalOpen(true);
+          }}
+          onDeletePrompt={(prompt) => {
+            setSelectedPrompt(prompt);
+            setIsDeleteModalOpen(true);
+          }}
+          onEditMedia={(item) => {
+            setSelectedMediaItem(item);
+            setIsMediaModalOpen(true);
+          }}
+          onDeleteMedia={(id) => {
+            const item = mediaItems.find((i) => i.id === id);
+            if (item) {
+              setSelectedMediaItem(item);
+              setIsDeleteMediaModalOpen(true);
+            }
+          }}
+          onEditNote={(note) => {
+            setSelectedNote(note);
+            setIsEditNoteModalOpen(true);
+          }}
+          onDeleteNote={(id) => {
+            const note = notes.find((n) => n.id === id);
+            if (note) {
+              setSelectedNote(note);
+              setIsDeleteNoteModalOpen(true);
+            }
+          }}
+          groupContentByDate={groupContentByDate}
+        />
 
         {user && (
-          <div className="hidden lg:block lg:w-[30%] lg:sticky lg:top-4">
-            <div className="border rounded-lg bg-white overflow-hidden">
-              <div className="bg-gray-50/80 px-4 py-3 border-b">
-                <h2 className="text-lg font-medium flex items-center justify-center gap-2">
-                  <span className="text-gray-800">🗒️</span>
-                  <span>Notes</span>
-                </h2>
-              </div>
-              <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
-                {notes.map((note) => (
-                  <Note
-                    key={note.id}
-                    note={note}
-                    isAdmin={isUserAdmin}
-                    onEdit={(note) => {
-                      setSelectedNote({ ...note, type: "note" });
-                      setIsEditNoteModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      const note = notes.find((n) => n.id === id);
-                      if (note) {
-                        setSelectedNote({ ...note, type: "note" });
-                        setIsDeleteNoteModalOpen(true);
-                      }
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+          <NotesSidebar
+            notes={notes}
+            isAdmin={isUserAdmin}
+            onEditNote={(note) => {
+              setSelectedNote(note);
+              setIsEditNoteModalOpen(true);
+            }}
+            onDeleteNote={(id) => {
+              const note = notes.find((n) => n.id === id);
+              if (note) {
+                setSelectedNote(note);
+                setIsDeleteNoteModalOpen(true);
+              }
+            }}
+          />
         )}
       </div>
 
@@ -1429,7 +912,7 @@ export default function Home() {
         open={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLoginSuccess={() => {
-          checkUser(); // Re-check user status after successful login
+          checkUser();
         }}
       />
     </main>

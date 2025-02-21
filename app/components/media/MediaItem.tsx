@@ -1,15 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  ExternalLink,
-  Newspaper,
-  Twitter,
-  Youtube,
-  MoreVertical,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-} from "lucide-react";
+import { MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Tweet } from "react-tweet";
 import YouTubeEmbed from "./YouTubeEmbed";

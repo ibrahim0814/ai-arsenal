@@ -1,7 +1,3 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Youtube, Shield } from "lucide-react";
-
 interface YouTubeEmbedProps {
   videoId: string;
 }

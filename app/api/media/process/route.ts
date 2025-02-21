@@ -1,41 +1,5 @@
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import * as cheerio from "cheerio";
 import { load } from "cheerio";
-
-function isTweetUrl(url: string): boolean {
-  return url.match(/^https?:\/\/(.*\.)?(twitter\.com|x\.com)\//) !== null;
-}
-
-function isYouTubeUrl(url: string): boolean {
-  return (
-    url.match(/^https?:\/\/(.*\.)?youtube\.com\/|^https?:\/\/youtu\.be\//) !==
-    null
-  );
-}
-
-function getYouTubeVideoId(url: string): string | null {
-  const regExp =
-    /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
-}
-
-async function generateSummary(content: string, type: string): Promise<string> {
-  // For now, return a simple summary based on the content
-  // In a real implementation, this would call an LLM API
-  switch (type) {
-    case "article":
-      return content.length > 200 ? content.substring(0, 200) + "..." : content;
-    case "tweet":
-      return content;
-    case "youtube":
-      return content.length > 150 ? content.substring(0, 150) + "..." : content;
-    default:
-      return content.length > 200 ? content.substring(0, 200) + "..." : content;
-  }
-}
 
 export async function POST(request: Request) {
   try {
@@ -99,19 +63,14 @@ export async function POST(request: Request) {
 
         // If no specific article content found, try meta description or main content area
         if (!content) {
-          content = $("main, .main-content, .content")
-            .first()
-            .text()
-            .trim();
+          content = $("main, .main-content, .content").first().text().trim();
         }
 
         // Last resort: try to get content from paragraphs in the body, excluding navigation, header, footer, etc.
         if (!content) {
           const excludeSelectors =
             "nav, header, footer, .nav, .header, .footer, .navigation, .menu, .sidebar, aside, .comments, script, style";
-          content = $(
-            "body"
-          )
+          content = $("body")
             .clone()
             .find(excludeSelectors)
             .remove()
@@ -131,18 +90,22 @@ export async function POST(request: Request) {
 
         // If we have substantial content, get it summarized
         if (content.length > 100) {
-          const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-          const host = request.headers.get('host') || '';
-          const summaryResponse = await fetch(`${protocol}://${host}/api/media/summarize`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              content,
-              type: "article",
-            }),
-          });
+          const protocol =
+            process.env.NODE_ENV === "development" ? "http" : "https";
+          const host = request.headers.get("host") || "";
+          const summaryResponse = await fetch(
+            `${protocol}://${host}/api/media/summarize`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                content,
+                type: "article",
+              }),
+            }
+          );
 
           if (!summaryResponse.ok) {
             throw new Error("Failed to generate summary");

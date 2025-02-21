@@ -1,7 +1,7 @@
 import { Calendar } from "lucide-react";
 import Note from "./Note";
 import MediaItem from "./MediaItem";
-import { formatPacificDateVeryShort, toPacificDate } from "@/utils/date";
+import { toPacificDate } from "@/utils/date";
 
 interface MediaItem {
   id: string;
