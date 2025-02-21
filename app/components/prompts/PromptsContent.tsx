@@ -45,7 +45,7 @@ export function PromptsContent({
       {prompts.map((prompt) => (
         <div
           key={prompt.id}
-          className="w-full border rounded-lg bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow"
+          className="w-full border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow"
         >
           <div className="p-4">
             <div className="flex items-start justify-between">
@@ -89,7 +89,7 @@ export function PromptsContent({
           </div>
           <div className="mx-4 mb-4">
             <div
-              className={`bg-gray-50 p-2 rounded-lg relative ${
+              className={`bg-gray-50 dark:bg-gray-800 p-2 rounded-lg relative ${
                 prompt.content.split("\n").length <= 1 ? "pb-4" : "pb-3"
               }`}
             >
@@ -100,7 +100,7 @@ export function PromptsContent({
                   }`}
                 >
                   <pre
-                    className={`text-sm font-mono whitespace-pre-wrap break-words px-3 pt-2 ${
+                    className={`text-sm font-mono whitespace-pre-wrap break-words px-3 pt-2 text-gray-800 dark:text-gray-200 ${
                       prompt.content.split("\n").length <= 1 ? "pb-2" : "pb-3"
                     }`}
                   >
@@ -111,7 +111,7 @@ export function PromptsContent({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="mt-2 w-full flex items-center justify-center gap-1 hover:bg-gray-100"
+                    className="mt-2 w-full flex items-center justify-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => togglePromptExpansion(prompt.id)}
                   >
                     {expandedPrompts[prompt.id] ? (
@@ -129,7 +129,7 @@ export function PromptsContent({
               <Button
                 variant="outline"
                 size="sm"
-                className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm hover:bg-white"
+                className="absolute top-3 right-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(prompt.content);

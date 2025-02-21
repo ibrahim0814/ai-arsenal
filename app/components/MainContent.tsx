@@ -81,16 +81,25 @@ export function MainContent({
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <div className="flex flex-col gap-4 mb-4">
           <div className="flex justify-between items-center">
-            <TabsList className="flex justify-start">
-              <TabsTrigger value="tools" className="min-w-[100px]">
+            <TabsList className="w-full sm:w-fit">
+              <TabsTrigger
+                value="tools"
+                className="flex-1 sm:flex-initial min-w-[100px]"
+              >
                 <Wrench className="h-4 w-4 mr-2" />
                 Tools
               </TabsTrigger>
-              <TabsTrigger value="prompts" className="min-w-[100px]">
+              <TabsTrigger
+                value="prompts"
+                className="flex-1 sm:flex-initial min-w-[100px]"
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Prompts
               </TabsTrigger>
-              <TabsTrigger value="media" className="min-w-[100px]">
+              <TabsTrigger
+                value="media"
+                className="flex-1 sm:flex-initial min-w-[100px]"
+              >
                 <Newspaper className="h-4 w-4 mr-2" />
                 Media
               </TabsTrigger>

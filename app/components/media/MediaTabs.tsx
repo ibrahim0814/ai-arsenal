@@ -40,22 +40,22 @@ export function MediaTabs({
 }: MediaTabsProps) {
   return (
     <Tabs defaultValue="all" className="w-full">
-      <div className="mb-2 flex">
-        <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="all" className="flex-1">
+      <div className="mb-2">
+        <TabsList className="w-full sm:w-fit">
+          <TabsTrigger value="all" className="flex-1 sm:flex-initial">
             <LayoutGrid className="h-4 w-4" />
           </TabsTrigger>
-          <TabsTrigger value="article" className="flex-1">
+          <TabsTrigger value="article" className="flex-1 sm:flex-initial">
             <Newspaper className="h-4 w-4" />
           </TabsTrigger>
-          <TabsTrigger value="tweet" className="flex-1">
+          <TabsTrigger value="tweet" className="flex-1 sm:flex-initial">
             <Twitter className="h-4 w-4" />
           </TabsTrigger>
-          <TabsTrigger value="youtube" className="flex-1">
+          <TabsTrigger value="youtube" className="flex-1 sm:flex-initial">
             <Youtube className="h-4 w-4" />
           </TabsTrigger>
           {user && (
-            <TabsTrigger value="notes" className="flex-1">
+            <TabsTrigger value="notes" className="flex-1 sm:flex-initial">
               <StickyNote className="h-4 w-4" />
             </TabsTrigger>
           )}
