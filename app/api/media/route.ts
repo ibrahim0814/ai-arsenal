@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { load } from "cheerio";
+import { getCurrentPacificDate } from "@/utils/date";
 
 const VALID_TYPES = ["article", "tweet", "youtube", "other"] as const;
 type MediaType = (typeof VALID_TYPES)[number];
@@ -180,9 +181,8 @@ export async function POST(request: Request) {
 
     // Create the media item with Pacific timezone
     const now = new Date();
-    const pacificTime = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
-    );
+    // Subtract 8 hours to get Pacific time
+    const pacificTime = new Date(now.getTime() - 8 * 60 * 60 * 1000);
 
     const mediaItem = await prisma.mediaItem.create({
       data: {
@@ -201,10 +201,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Error creating media item:", error);
     return NextResponse.json(
-      {
-        error: "Failed to create media item",
-        details: error.message,
-      },
+      { error: error.message || "Failed to create media item" },
       { status: 500 }
     );
   }

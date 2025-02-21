@@ -43,9 +43,7 @@ export default function DailySummaryCard({
   onDeleteMedia,
 }: DailySummaryCardProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    // Add 8 hours to match Pacific time
-    date.setHours(date.getHours() + 8);
+    const date = toPacificDate(dateString);
     const weekday = date.toLocaleString("en-US", { weekday: "short" });
     const monthDay = date.toLocaleString("en-US", {
       month: "short",
@@ -61,10 +59,11 @@ export default function DailySummaryCard({
   };
 
   // Sort items by creation time
-  const sortedItems = [...items].sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  const sortedItems = [...items].sort((a, b) => {
+    const dateA = toPacificDate(a.created_at);
+    const dateB = toPacificDate(b.created_at);
+    return dateB.getTime() - dateA.getTime();
+  });
 
   // Filter items to only show those matching the card's date
   const cardDate = getPacificDate(date);

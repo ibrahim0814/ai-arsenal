@@ -153,7 +153,7 @@ export default function MediaItem({
       <div className="relative w-full border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
         {isAdmin && renderActions()}
         <div className="p-4">
-          <div className="aspect-video w-full mb-3">
+          <div className="w-full mb-3">
             {item.videoId ? (
               <YouTubeEmbed videoId={item.videoId} />
             ) : (

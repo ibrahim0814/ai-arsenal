@@ -30,11 +30,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create the note with Pacific timezone
+    // Get current time in UTC
     const now = new Date();
-    const pacificTime = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
-    );
+    // Subtract 8 hours to get Pacific time
+    const pacificTime = new Date(now.getTime() - 8 * 60 * 60 * 1000);
 
     const note = await prisma.note.create({
       data: {
@@ -48,10 +47,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Error creating note:", error);
     return NextResponse.json(
-      {
-        error: "Failed to create note",
-        details: error.message,
-      },
+      { error: error.message || "Failed to create note" },
       { status: 500 }
     );
   }

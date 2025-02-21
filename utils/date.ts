@@ -3,7 +3,7 @@ export const formatPacificDate = (
   options: Intl.DateTimeFormatOptions = {}
 ) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleString("en-US", {
     timeZone: "America/Los_Angeles",
     ...options,
   });
@@ -11,9 +11,15 @@ export const formatPacificDate = (
 
 export const toPacificDate = (dateString: string) => {
   const date = new Date(dateString);
-  const utcDate = new Date(date.toUTCString());
   return new Date(
-    utcDate.getTime() + (utcDate.getTimezoneOffset() + 480) * 60000
+    date.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
+  );
+};
+
+export const getCurrentPacificDate = () => {
+  const now = new Date();
+  return new Date(
+    now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
   );
 };
 

@@ -172,6 +172,11 @@ export default function Home() {
         throw new Error("Failed to fetch media items");
       }
       const data = await response.json();
+      console.log("Fetched media items:", data);
+      console.log(
+        "Media items of type 'tweet':",
+        data.filter((item: MediaItem) => item.type === "tweet")
+      );
       setMediaItems(data);
     } catch (error) {
       console.error("Error fetching media items:", error);
@@ -611,15 +616,13 @@ export default function Home() {
 
     // Helper function to add item to the appropriate date group
     const addToGroup = (item: MediaItem | Note) => {
-      const date = new Date(item.created_at);
-      // Add 8 hours to match Pacific time
-      date.setHours(date.getHours() + 8);
-      // Get just the date part for grouping (without changing the original timestamp)
+      const date = toPacificDate(item.created_at);
       const dateKey = date.toLocaleDateString("en-US", {
         weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: "America/Los_Angeles",
       });
 
       if (!groups[dateKey]) {
@@ -636,21 +639,17 @@ export default function Home() {
 
     // Sort dates and items within each date
     return Object.entries(groups)
+      .filter(([_, items]) => items.length > 0) // Only keep groups with items
       .sort(([dateA], [dateB]) => {
-        // Convert the date strings back to Date objects for the first item in each group
-        const dateAFirstItem = new Date(groups[dateA][0].created_at);
-        const dateBFirstItem = new Date(groups[dateB][0].created_at);
-        dateAFirstItem.setHours(dateAFirstItem.getHours() + 8);
-        dateBFirstItem.setHours(dateBFirstItem.getHours() + 8);
-        return dateBFirstItem.getTime() - dateAFirstItem.getTime();
+        const dateAObj = toPacificDate(groups[dateA][0].created_at);
+        const dateBObj = toPacificDate(groups[dateB][0].created_at);
+        return dateBObj.getTime() - dateAObj.getTime();
       })
       .map(([date, items]) => ({
         date,
         items: items.sort((a, b) => {
-          const dateA = new Date(a.created_at);
-          const dateB = new Date(b.created_at);
-          dateA.setHours(dateA.getHours() + 8);
-          dateB.setHours(dateB.getHours() + 8);
+          const dateA = toPacificDate(a.created_at);
+          const dateB = toPacificDate(b.created_at);
           return dateB.getTime() - dateA.getTime();
         }),
       }));
@@ -1120,22 +1119,30 @@ export default function Home() {
                 </TabsContent>
 
                 <TabsContent value="article">
-                  <MediaGrid
-                    items={mediaItems.filter((item) => item.type === "article")}
-                    onEdit={(item) => {
-                      setSelectedMediaItem(item);
-                      setIsMediaModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      const item = mediaItems.find((i) => i.id === id);
-                      if (item) {
-                        setSelectedMediaItem(item);
-                        setIsDeleteMediaModalOpen(true);
-                      }
-                    }}
-                    onReorder={setMediaItems}
-                    isAdmin={isUserAdmin}
-                  />
+                  <div className="space-y-4">
+                    {mediaItems
+                      .filter((item) => item.type === "article")
+                      .map((item) => (
+                        <MediaItem
+                          key={item.id}
+                          item={item}
+                          isAdmin={isUserAdmin}
+                          onEdit={(item) => {
+                            setSelectedMediaItem(item);
+                            setIsMediaModalOpen(true);
+                          }}
+                          onDelete={(id) => {
+                            const mediaItem = mediaItems.find(
+                              (i) => i.id === id
+                            );
+                            if (mediaItem) {
+                              setSelectedMediaItem(mediaItem);
+                              setIsDeleteMediaModalOpen(true);
+                            }
+                          }}
+                        />
+                      ))}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="tweet">
@@ -1158,22 +1165,30 @@ export default function Home() {
                 </TabsContent>
 
                 <TabsContent value="youtube">
-                  <MediaGrid
-                    items={mediaItems.filter((item) => item.type === "youtube")}
-                    onEdit={(item) => {
-                      setSelectedMediaItem(item);
-                      setIsMediaModalOpen(true);
-                    }}
-                    onDelete={(id) => {
-                      const item = mediaItems.find((i) => i.id === id);
-                      if (item) {
-                        setSelectedMediaItem(item);
-                        setIsDeleteMediaModalOpen(true);
-                      }
-                    }}
-                    onReorder={setMediaItems}
-                    isAdmin={isUserAdmin}
-                  />
+                  <div className="space-y-4">
+                    {mediaItems
+                      .filter((item) => item.type === "youtube")
+                      .map((item) => (
+                        <MediaItem
+                          key={item.id}
+                          item={item}
+                          isAdmin={isUserAdmin}
+                          onEdit={(item) => {
+                            setSelectedMediaItem(item);
+                            setIsMediaModalOpen(true);
+                          }}
+                          onDelete={(id) => {
+                            const mediaItem = mediaItems.find(
+                              (i) => i.id === id
+                            );
+                            if (mediaItem) {
+                              setSelectedMediaItem(mediaItem);
+                              setIsDeleteMediaModalOpen(true);
+                            }
+                          }}
+                        />
+                      ))}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="notes">
