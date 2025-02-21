@@ -99,20 +99,57 @@ export default function Home() {
 
   async function fetchPublicData() {
     try {
-      const [toolsData, promptsData, mediaData] = await Promise.all([
-        fetch("/api/tools").then((res) => res.json()),
-        fetch("/api/prompts").then((res) => res.json()),
-        fetch("/api/media").then((res) => res.json()),
+      const fetchWithTimeout = async (url: string, timeout = 5000) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(id);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        } catch (error: any) {
+          if (error.name === "AbortError") {
+            throw new Error("Request timed out");
+          }
+          throw error;
+        }
+      };
+
+      const results = await Promise.allSettled([
+        fetchWithTimeout("/api/tools"),
+        fetchWithTimeout("/api/prompts"),
+        fetchWithTimeout("/api/media"),
       ]);
 
-      setTools(toolsData || []);
-      setPrompts(promptsData || []);
-      setMediaItems(mediaData || []);
-    } catch (error) {
-      console.error("Error fetching public data:", error);
-      setError(
-        "Failed to fetch data. Please check your connection and try again."
+      // Process results, using empty arrays for any failed requests
+      const [toolsResult, promptsResult, mediaResult] = results;
+
+      setTools(toolsResult.status === "fulfilled" ? toolsResult.value : []);
+      setPrompts(
+        promptsResult.status === "fulfilled" ? promptsResult.value : []
       );
+      setMediaItems(
+        mediaResult.status === "fulfilled" ? mediaResult.value : []
+      );
+
+      // Show error toast if any requests failed
+      const failedRequests = results.filter((r) => r.status === "rejected");
+      if (failedRequests.length > 0) {
+        toast({
+          title: "Some data failed to load",
+          description: "Try refreshing the page.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error fetching public data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch data. Please try refreshing the page.",
+        variant: "destructive",
+      });
     }
   }
 
@@ -154,9 +191,22 @@ export default function Home() {
 
   useEffect(() => {
     if (tools.length > 0) {
-      indexTools(tools).catch(console.error);
+      // Add a small delay to ensure initial render is complete
+      const timer = setTimeout(() => {
+        indexTools(tools).catch((error) => {
+          console.error("Error indexing tools:", error);
+          // Don't block the app for indexing errors
+          toast({
+            title: "Search Indexing Error",
+            description: "Search functionality might be limited.",
+            variant: "destructive",
+          });
+        });
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
-  }, [tools]);
+  }, [tools, toast]);
 
   async function checkUser() {
     const currentUser = await getCurrentUser();

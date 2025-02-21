@@ -30,7 +30,7 @@ export function ToolsContent({
 }: ToolsContentProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-2.5">
         {isSearching ? (
           <div className="text-center py-4">
             <Loader2 className="h-6 w-6 animate-spin mx-auto" />

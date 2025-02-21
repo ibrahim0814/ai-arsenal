@@ -1,7 +1,20 @@
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import {
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+  MoreVertical,
+} from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Prompt {
   id: string;
@@ -40,12 +53,39 @@ export function PromptsContent({
     }));
   };
 
+  const renderActions = (prompt: Prompt) => (
+    <div className="absolute top-2 right-2 z-10">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onEdit(prompt)}>
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-red-600 dark:text-red-400"
+            onClick={() => onDelete(prompt)}
+          >
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
   return (
     <div className="grid grid-cols-1 gap-2">
       {prompts.map((prompt) => (
         <div
           key={prompt.id}
-          className="w-full border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow"
+          className="w-full border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow relative"
         >
           <div className="p-4">
             <div className="flex items-start justify-between">
@@ -59,32 +99,7 @@ export function PromptsContent({
                     : "💭 Normal Prompt"}
                 </p>
               </div>
-              {isAdmin && (
-                <div className="flex gap-2 ml-6">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={processingIds[prompt.id]}
-                    onClick={() => onEdit(prompt)}
-                  >
-                    {processingIds[prompt.id] ? (
-                      <span className="flex items-center">
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </span>
-                    ) : (
-                      "Edit"
-                    )}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => onDelete(prompt)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              )}
+              {isAdmin && renderActions(prompt)}
             </div>
           </div>
           <div className="mx-4 mb-4">
