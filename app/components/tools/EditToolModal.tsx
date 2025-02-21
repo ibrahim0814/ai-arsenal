@@ -302,7 +302,7 @@ export function EditToolModal({
             </div>
 
             {/* Title and Description Section */}
-            <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+            <div className="space-y-4 bg-gray-50 dark:bg-gray-900 dark:border-gray-800 rounded-lg p-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input

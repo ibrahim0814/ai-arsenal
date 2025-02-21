@@ -14,7 +14,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Header } from "./components/Header";
 import { MainContent } from "./components/MainContent";
 import { NotesSidebar } from "./components/NotesSidebar";
-import { indexTools } from "@/lib/meilisearch";
 import { toPacificDate } from "@/utils/date";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 
@@ -173,14 +172,52 @@ export default function Home() {
     const initializeApp = async () => {
       setLoading(true);
       try {
-        await fetchPublicData();
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-        if (currentUser) {
-          const adminStatus = await isAdmin(currentUser);
-          setIsUserAdmin(adminStatus);
-          await fetchNotes();
+        // First load tools since they're shown first on mobile
+        const toolsResponse = await fetch("/api/tools");
+        if (toolsResponse.ok) {
+          const toolsData = await toolsResponse.json();
+          setTools(toolsData);
+          setLoading(false); // Stop loading spinner after tools are loaded
+
+          // Load other data in the background
+          Promise.all([fetch("/api/prompts"), fetch("/api/media")])
+            .then(async ([promptsResponse, mediaResponse]) => {
+              if (promptsResponse.ok) {
+                const promptsData = await promptsResponse.json();
+                setPrompts(promptsData);
+              }
+              if (mediaResponse.ok) {
+                const mediaData = await mediaResponse.json();
+                setMediaItems(mediaData);
+              }
+            })
+            .catch((error) => {
+              console.error("Error loading background data:", error);
+              toast({
+                title: "Some data failed to load",
+                description: "Try refreshing the page.",
+                variant: "destructive",
+              });
+            });
+
+          // Check user and load notes in parallel
+          const currentUser = await getCurrentUser();
+          setUser(currentUser);
+          if (currentUser) {
+            const adminStatus = await isAdmin(currentUser);
+            setIsUserAdmin(adminStatus);
+            await fetchNotes();
+          }
+        } else {
+          throw new Error("Failed to fetch tools");
         }
+      } catch (error) {
+        console.error("Error in initial load:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load data. Please try refreshing the page.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -188,25 +225,6 @@ export default function Home() {
 
     initializeApp();
   }, []);
-
-  useEffect(() => {
-    if (tools.length > 0) {
-      // Add a small delay to ensure initial render is complete
-      const timer = setTimeout(() => {
-        indexTools(tools).catch((error) => {
-          console.error("Error indexing tools:", error);
-          // Don't block the app for indexing errors
-          toast({
-            title: "Search Indexing Error",
-            description: "Search functionality might be limited.",
-            variant: "destructive",
-          });
-        });
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [tools, toast]);
 
   async function checkUser() {
     const currentUser = await getCurrentUser();

@@ -373,7 +373,7 @@ export function AddToolModal({ open, onClose, onAdd }: AddToolModalProps) {
             </div>
 
             {/* Content Section */}
-            <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+            <div className="space-y-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-900 dark:border-gray-800">
               {!isManual ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -388,13 +388,15 @@ export function AddToolModal({ open, onClose, onAdd }: AddToolModalProps) {
                   </div>
                   {manualTitle || manualDescription ? (
                     <div className="space-y-2">
-                      <div className="font-medium">{manualTitle}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium dark:text-gray-200">
+                        {manualTitle}
+                      </div>
+                      <div className="text-sm text-muted-foreground dark:text-gray-400">
                         {manualDescription}
                       </div>
                     </div>
                   ) : !isGenerating && link && !isValidUrl ? (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground dark:text-gray-400">
                       Enter a valid URL to auto-generate description and tags
                     </div>
                   ) : null}

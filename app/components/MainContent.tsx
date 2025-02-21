@@ -1,11 +1,22 @@
+import { Suspense, lazy } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wrench, FileText, Newspaper } from "lucide-react";
-import { ToolsContent } from "./tools/ToolsContent";
-import { PromptsContent } from "./prompts/PromptsContent";
-import { MediaTabs } from "./media/MediaTabs";
 import { Tool, Prompt, MediaItem, Note, ContentItem } from "@/types";
 import { ToolsSearch } from "./tools/ToolsSearch";
 import { LoadingSpinner } from "./LoadingSpinner";
+
+// Lazy load non-critical components
+const ToolsContent = lazy(() =>
+  import("./tools/ToolsContent").then((mod) => ({ default: mod.ToolsContent }))
+);
+const PromptsContent = lazy(() =>
+  import("./prompts/PromptsContent").then((mod) => ({
+    default: mod.PromptsContent,
+  }))
+);
+const MediaTabs = lazy(() =>
+  import("./media/MediaTabs").then((mod) => ({ default: mod.MediaTabs }))
+);
 
 interface MainContentProps {
   activeTab: string;
@@ -121,15 +132,17 @@ export function MainContent({
           {toolsLoading ? (
             <LoadingSpinner />
           ) : (
-            <ToolsContent
-              tools={tools}
-              searchResults={searchResults}
-              isSearching={isSearching}
-              onSearch={onSearch}
-              onEdit={onEditTool}
-              onDelete={onDeleteTool}
-              isAdmin={isAdmin}
-            />
+            <Suspense fallback={<LoadingSpinner />}>
+              <ToolsContent
+                tools={tools}
+                searchResults={searchResults}
+                isSearching={isSearching}
+                onSearch={onSearch}
+                onEdit={onEditTool}
+                onDelete={onDeleteTool}
+                isAdmin={isAdmin}
+              />
+            </Suspense>
           )}
         </TabsContent>
 
@@ -137,13 +150,15 @@ export function MainContent({
           {promptsLoading ? (
             <LoadingSpinner />
           ) : (
-            <PromptsContent
-              prompts={prompts}
-              isAdmin={isAdmin}
-              processingIds={processingIds}
-              onEdit={onEditPrompt}
-              onDelete={onDeletePrompt}
-            />
+            <Suspense fallback={<LoadingSpinner />}>
+              <PromptsContent
+                prompts={prompts}
+                isAdmin={isAdmin}
+                processingIds={processingIds}
+                onEdit={onEditPrompt}
+                onDelete={onDeletePrompt}
+              />
+            </Suspense>
           )}
         </TabsContent>
 
@@ -151,17 +166,19 @@ export function MainContent({
           {mediaLoading ? (
             <LoadingSpinner />
           ) : (
-            <MediaTabs
-              mediaItems={mediaItems}
-              notes={notes}
-              isAdmin={isAdmin}
-              user={user}
-              onEditMedia={onEditMedia}
-              onDeleteMedia={onDeleteMedia}
-              onEditNote={onEditNote}
-              onDeleteNote={onDeleteNote}
-              groupContentByDate={groupContentByDate}
-            />
+            <Suspense fallback={<LoadingSpinner />}>
+              <MediaTabs
+                mediaItems={mediaItems}
+                notes={notes}
+                isAdmin={isAdmin}
+                user={user}
+                onEditMedia={onEditMedia}
+                onDeleteMedia={onDeleteMedia}
+                onEditNote={onEditNote}
+                onDeleteNote={onDeleteNote}
+                groupContentByDate={groupContentByDate}
+              />
+            </Suspense>
           )}
         </TabsContent>
       </Tabs>

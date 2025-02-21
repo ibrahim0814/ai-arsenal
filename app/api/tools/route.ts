@@ -27,32 +27,23 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { url, title, description, tags, is_personal_tool } =
-      await request.json();
-
-    if (!url || !title || !description) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
+    const data = await request.json();
     const tool = await prisma.tool.create({
       data: {
-        title,
-        link: url, // Map url to link for database
-        description,
-        tags,
-        is_personal_tool,
-        updated_at: new Date(),
+        link: data.url,
+        title: data.title,
+        description: data.description,
+        tags: data.tags,
+        is_personal_tool: data.is_personal_tool,
       },
     });
 
-    // Convert BigInt ID to string for JSON serialization
-    return NextResponse.json({
+    const serializedTool = {
       ...tool,
       id: tool.id.toString(),
-    });
+    };
+
+    return NextResponse.json(serializedTool);
   } catch (error) {
     console.error("Error creating tool:", error);
     return NextResponse.json(
