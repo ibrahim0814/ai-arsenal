@@ -1,6 +1,7 @@
 import { LoadingSpinner } from "./LoadingSpinner";
 import NoteComponent from "./media/Note";
 import { Note } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface NotesSidebarProps {
   notes: Note[];
@@ -10,6 +11,22 @@ interface NotesSidebarProps {
   isLoading?: boolean;
 }
 
+function NoteSkeleton() {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start gap-2">
+        <Skeleton className="h-[60px] flex-1 rounded-lg" />
+      </div>
+      <div className="flex items-start gap-2">
+        <Skeleton className="h-[80px] flex-1 rounded-lg" />
+      </div>
+      <div className="flex items-start gap-2">
+        <Skeleton className="h-[40px] flex-1 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 export function NotesSidebar({
   notes,
   isAdmin,
@@ -17,14 +34,6 @@ export function NotesSidebar({
   onDeleteNote,
   isLoading = false,
 }: NotesSidebarProps) {
-  if (isLoading) {
-    return (
-      <div className="hidden lg:block lg:w-[30%]">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
   return (
     <div className="hidden lg:block lg:w-[30%] lg:sticky lg:top-4 mt-2">
       <div className="border rounded-lg bg-white overflow-hidden">
@@ -35,15 +44,19 @@ export function NotesSidebar({
           </h2>
         </div>
         <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
-          {notes.map((note) => (
-            <NoteComponent
-              key={note.id}
-              note={note}
-              isAdmin={isAdmin}
-              onEdit={() => onEditNote(note)}
-              onDelete={() => onDeleteNote(note.id)}
-            />
-          ))}
+          {isLoading ? (
+            <NoteSkeleton />
+          ) : (
+            notes.map((note) => (
+              <NoteComponent
+                key={note.id}
+                note={note}
+                isAdmin={isAdmin}
+                onEdit={() => onEditNote(note)}
+                onDelete={() => onDeleteNote(note.id)}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

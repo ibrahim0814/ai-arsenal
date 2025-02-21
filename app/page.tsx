@@ -69,6 +69,7 @@ export default function Home() {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contentLoading, setContentLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingIds, setProcessingIds] = useState<Record<string, boolean>>(
     {}
@@ -95,22 +96,60 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Tool[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const latestSearchRef = useRef<string>("");
-  const [toolsLoading, setToolsLoading] = useState(true);
-  const [promptsLoading, setPromptsLoading] = useState(true);
-  const [mediaLoading, setMediaLoading] = useState(true);
-  const [notesLoading, setNotesLoading] = useState(true);
 
+  async function fetchPublicData() {
+    try {
+      const [toolsData, promptsData, mediaData] = await Promise.all([
+        fetch("/api/tools").then((res) => res.json()),
+        fetch("/api/prompts").then((res) => res.json()),
+        fetch("/api/media").then((res) => res.json()),
+      ]);
+
+      setTools(toolsData || []);
+      setPrompts(promptsData || []);
+      setMediaItems(mediaData || []);
+    } catch (error) {
+      console.error("Error fetching public data:", error);
+      setError(
+        "Failed to fetch data. Please check your connection and try again."
+      );
+    }
+  }
+
+  async function fetchNotes() {
+    try {
+      const response = await fetch("/api/notes");
+      if (!response.ok) {
+        throw new Error("Failed to fetch notes");
+      }
+      const data = await response.json();
+      setNotes(
+        (data || []).map((note: any) => ({ ...note, type: "note" as const }))
+      );
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  }
+
+  // Initial data load
   useEffect(() => {
-    // Fetch all data in parallel
-    Promise.all([
-      fetchTools(),
-      fetchPrompts(),
-      fetchMediaItems(),
-      fetchNotes(),
-      checkUser(),
-    ]).finally(() => {
-      setLoading(false);
-    });
+    const initializeApp = async () => {
+      setLoading(true);
+      try {
+        await fetchPublicData();
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+        if (currentUser) {
+          const adminStatus = await isAdmin(currentUser);
+          setIsUserAdmin(adminStatus);
+          await fetchNotes();
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {
@@ -125,73 +164,9 @@ export default function Home() {
     if (currentUser) {
       const adminStatus = await isAdmin(currentUser);
       setIsUserAdmin(adminStatus);
-    }
-  }
-
-  async function fetchTools() {
-    setToolsLoading(true);
-    try {
-      const response = await fetch("/api/tools");
-      if (!response.ok) {
-        throw new Error("Failed to fetch tools");
-      }
-      const data = await response.json();
-      setTools(data || []);
-    } catch (error) {
-      console.error("Error fetching tools:", error);
-      setError(
-        "Failed to fetch tools. Please check your connection and try again."
-      );
-    } finally {
-      setToolsLoading(false);
-    }
-  }
-
-  async function fetchPrompts() {
-    setPromptsLoading(true);
-    try {
-      const response = await fetch("/api/prompts");
-      if (!response.ok) {
-        throw new Error("Failed to fetch prompts");
-      }
-      const data = await response.json();
-      setPrompts(data);
-    } catch (error) {
-      console.error("Error fetching prompts:", error);
-    } finally {
-      setPromptsLoading(false);
-    }
-  }
-
-  async function fetchMediaItems() {
-    setMediaLoading(true);
-    try {
-      const response = await fetch("/api/media");
-      if (!response.ok) {
-        throw new Error("Failed to fetch media items");
-      }
-      const data = await response.json();
-      setMediaItems(data);
-    } catch (error) {
-      console.error("Error fetching media items:", error);
-    } finally {
-      setMediaLoading(false);
-    }
-  }
-
-  async function fetchNotes() {
-    setNotesLoading(true);
-    try {
-      const response = await fetch("/api/notes");
-      if (!response.ok) {
-        throw new Error("Failed to fetch notes");
-      }
-      const data = await response.json();
-      setNotes(data.map((note: any) => ({ ...note, type: "note" as const })));
-    } catch (error) {
-      console.error("Error fetching notes:", error);
-    } finally {
-      setNotesLoading(false);
+      await fetchNotes();
+    } else {
+      setNotes([]);
     }
   }
 
@@ -412,7 +387,7 @@ export default function Home() {
       }
 
       setIsAddModalOpen(false);
-      await fetchPrompts(); // Rehydrate the prompts list
+      await fetchPublicData();
     } catch (error: any) {
       console.error("Error in handleAddPrompt:", error);
       toast({
@@ -452,7 +427,7 @@ export default function Home() {
 
       setIsEditModalOpen(false);
       setSelectedPrompt(null);
-      await fetchPrompts(); // Rehydrate the prompts list
+      await fetchPublicData();
     } catch (error: any) {
       console.error("Error updating prompt:", error);
       toast({
@@ -480,7 +455,7 @@ export default function Home() {
 
       setIsDeleteModalOpen(false);
       setSelectedPrompt(null);
-      await fetchPrompts(); // Rehydrate the prompts list
+      await fetchPublicData();
     } catch (error: any) {
       console.error("Error deleting prompt:", error);
       toast({
@@ -501,7 +476,6 @@ export default function Home() {
   ) {
     setIsProcessing(true);
     try {
-      // Add the media item with the processed data
       const response = await fetch("/api/media", {
         method: "POST",
         headers: {
@@ -520,7 +494,7 @@ export default function Home() {
       }
 
       setIsAddModalOpen(false);
-      await fetchMediaItems();
+      await fetchPublicData();
     } catch (error: any) {
       console.error("Error in handleAddMediaItem:", error);
       toast({
@@ -562,7 +536,7 @@ export default function Home() {
 
       setIsMediaModalOpen(false);
       setSelectedMediaItem(null);
-      await fetchMediaItems();
+      await fetchPublicData();
     } catch (error: any) {
       console.error("Error updating media item:", error);
       toast({
@@ -590,7 +564,7 @@ export default function Home() {
 
       setIsDeleteMediaModalOpen(false);
       setSelectedMediaItem(null);
-      await fetchMediaItems();
+      await fetchPublicData();
     } catch (error: any) {
       console.error("Error deleting media item:", error);
       toast({
@@ -674,8 +648,11 @@ export default function Home() {
   }
 
   async function handleEditNote(content: string) {
+    if (!selectedNote) return;
+
+    setProcessingIds((prev) => ({ ...prev, [selectedNote.id]: true }));
     try {
-      const response = await fetch(`/api/notes/${selectedNote!.id}`, {
+      const response = await fetch(`/api/notes/${selectedNote.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -703,12 +680,19 @@ export default function Home() {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      if (selectedNote) {
+        setProcessingIds((prev) => ({ ...prev, [selectedNote.id]: false }));
+      }
     }
   }
 
   async function handleDeleteNote() {
+    if (!selectedNote) return;
+
+    setProcessingIds((prev) => ({ ...prev, [selectedNote.id]: true }));
     try {
-      const response = await fetch(`/api/notes/${selectedNote!.id}`, {
+      const response = await fetch(`/api/notes/${selectedNote.id}`, {
         method: "DELETE",
       });
 
@@ -732,6 +716,10 @@ export default function Home() {
         variant: "destructive",
         duration: 2000,
       });
+    } finally {
+      if (selectedNote) {
+        setProcessingIds((prev) => ({ ...prev, [selectedNote.id]: false }));
+      }
     }
   }
 
@@ -813,9 +801,9 @@ export default function Home() {
           }}
           groupContentByDate={groupContentByDate}
           isLoading={loading}
-          toolsLoading={toolsLoading}
-          promptsLoading={promptsLoading}
-          mediaLoading={mediaLoading}
+          toolsLoading={loading}
+          promptsLoading={loading}
+          mediaLoading={loading}
         />
 
         {user && (
@@ -833,7 +821,7 @@ export default function Home() {
                 setIsDeleteNoteModalOpen(true);
               }
             }}
-            isLoading={notesLoading}
+            isLoading={contentLoading}
           />
         )}
       </div>
@@ -843,6 +831,16 @@ export default function Home() {
           <LoginModal
             open={isLoginModalOpen}
             onClose={() => setIsLoginModalOpen(false)}
+            onLoginSuccess={async () => {
+              setContentLoading(true);
+              try {
+                await checkUser();
+                await fetchNotes();
+              } finally {
+                setContentLoading(false);
+                setIsLoginModalOpen(false);
+              }
+            }}
           />
         )}
 
