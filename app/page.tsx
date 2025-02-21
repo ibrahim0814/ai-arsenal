@@ -1,50 +1,67 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Tool } from "../types/tool";
-import { LoginModal } from "./components/LoginModal";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
+import { Tool, Prompt, MediaItem, Note } from "@/types";
 import { getCurrentUser, isAdmin, signOut } from "../utils/auth";
 import { useToast } from "@/components/ui/use-toast";
 import { Header } from "./components/Header";
 import { MainContent } from "./components/MainContent";
 import { NotesSidebar } from "./components/NotesSidebar";
-import { AddToolModal } from "./components/tools/AddToolModal";
-import { PromptFormModal } from "./components/prompts/PromptFormModal";
-import { DeletePromptModal } from "./components/prompts/DeletePromptModal";
-import { AddMediaModal } from "./components/media/AddMediaModal";
-import { DeleteMediaModal } from "./components/media/DeleteMediaModal";
-import { AddNoteModal } from "./components/media/AddNoteModal";
-import { EditNoteModal } from "./components/media/EditNoteModal";
-import { DeleteNoteModal } from "./components/media/DeleteNoteModal";
 import { indexTools } from "@/lib/meilisearch";
 import { toPacificDate } from "@/utils/date";
+import { LoadingSpinner } from "./components/LoadingSpinner";
 
-interface Prompt {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
-
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-  type: "note";
-}
+// Lazy load modals and other non-critical components
+const LoginModal = lazy(() =>
+  import("./components/LoginModal").then((mod) => ({ default: mod.LoginModal }))
+);
+const AddToolModal = lazy(() =>
+  import("./components/tools/AddToolModal").then((mod) => ({
+    default: mod.AddToolModal,
+  }))
+);
+const PromptFormModal = lazy(() =>
+  import("./components/prompts/PromptFormModal").then((mod) => ({
+    default: mod.PromptFormModal,
+  }))
+);
+const DeletePromptModal = lazy(() =>
+  import("./components/prompts/DeletePromptModal").then((mod) => ({
+    default: mod.DeletePromptModal,
+  }))
+);
+const AddMediaModal = lazy(() =>
+  import("./components/media/AddMediaModal").then((mod) => ({
+    default: mod.AddMediaModal,
+  }))
+);
+const DeleteMediaModal = lazy(() =>
+  import("./components/media/DeleteMediaModal").then((mod) => ({
+    default: mod.DeleteMediaModal,
+  }))
+);
+const AddNoteModal = lazy(() =>
+  import("./components/media/AddNoteModal").then((mod) => ({
+    default: mod.AddNoteModal,
+  }))
+);
+const EditNoteModal = lazy(() =>
+  import("./components/media/EditNoteModal").then((mod) => ({
+    default: mod.EditNoteModal,
+  }))
+);
+const DeleteNoteModal = lazy(() =>
+  import("./components/media/DeleteNoteModal").then((mod) => ({
+    default: mod.DeleteNoteModal,
+  }))
+);
 
 export default function Home() {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -78,13 +95,22 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Tool[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const latestSearchRef = useRef<string>("");
+  const [toolsLoading, setToolsLoading] = useState(true);
+  const [promptsLoading, setPromptsLoading] = useState(true);
+  const [mediaLoading, setMediaLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(true);
 
   useEffect(() => {
-    fetchTools();
-    fetchPrompts();
-    fetchMediaItems();
-    fetchNotes();
-    checkUser();
+    // Fetch all data in parallel
+    Promise.all([
+      fetchTools(),
+      fetchPrompts(),
+      fetchMediaItems(),
+      fetchNotes(),
+      checkUser(),
+    ]).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -103,7 +129,7 @@ export default function Home() {
   }
 
   async function fetchTools() {
-    setLoading(true);
+    setToolsLoading(true);
     try {
       const response = await fetch("/api/tools");
       if (!response.ok) {
@@ -117,11 +143,12 @@ export default function Home() {
         "Failed to fetch tools. Please check your connection and try again."
       );
     } finally {
-      setLoading(false);
+      setToolsLoading(false);
     }
   }
 
   async function fetchPrompts() {
+    setPromptsLoading(true);
     try {
       const response = await fetch("/api/prompts");
       if (!response.ok) {
@@ -131,28 +158,29 @@ export default function Home() {
       setPrompts(data);
     } catch (error) {
       console.error("Error fetching prompts:", error);
+    } finally {
+      setPromptsLoading(false);
     }
   }
 
   async function fetchMediaItems() {
+    setMediaLoading(true);
     try {
       const response = await fetch("/api/media");
       if (!response.ok) {
         throw new Error("Failed to fetch media items");
       }
       const data = await response.json();
-      console.log("Fetched media items:", data);
-      console.log(
-        "Media items of type 'tweet':",
-        data.filter((item: MediaItem) => item.type === "tweet")
-      );
       setMediaItems(data);
     } catch (error) {
       console.error("Error fetching media items:", error);
+    } finally {
+      setMediaLoading(false);
     }
   }
 
   async function fetchNotes() {
+    setNotesLoading(true);
     try {
       const response = await fetch("/api/notes");
       if (!response.ok) {
@@ -162,6 +190,8 @@ export default function Home() {
       setNotes(data.map((note: any) => ({ ...note, type: "note" as const })));
     } catch (error) {
       console.error("Error fetching notes:", error);
+    } finally {
+      setNotesLoading(false);
     }
   }
 
@@ -643,26 +673,86 @@ export default function Home() {
     }
   }
 
+  async function handleEditNote(content: string) {
+    try {
+      const response = await fetch(`/api/notes/${selectedNote!.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      await fetchNotes();
+      setIsEditNoteModalOpen(false);
+      setSelectedNote(null);
+      toast({
+        title: "Success",
+        description: "Note updated successfully",
+        duration: 2000,
+      });
+    } catch (error: any) {
+      console.error("Error updating note:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update note",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  }
+
+  async function handleDeleteNote() {
+    try {
+      const response = await fetch(`/api/notes/${selectedNote!.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      await fetchNotes();
+      setIsDeleteNoteModalOpen(false);
+      setSelectedNote(null);
+      toast({
+        title: "Success",
+        description: "Note deleted successfully",
+        duration: 2000,
+      });
+    } catch (error: any) {
+      console.error("Error deleting note:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete note",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  }
+
   if (loading) {
-    return <div className="container mx-auto px-4 py-8">Loading...</div>;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-red-500">{error}</p>
-        <button
-          onClick={fetchTools}
-          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Retry
-        </button>
+        <div className="text-center text-red-500">{error}</div>
       </div>
     );
   }
 
   return (
-    <main className="container mx-auto px-4 sm:px-8 pt-4 sm:pt-10 pb-6">
+    <div className="container mx-auto px-4 py-8">
       <Header
         isUserAdmin={isUserAdmin}
         user={user}
@@ -675,7 +765,7 @@ export default function Home() {
         onOpenAddNote={() => setIsAddNoteModalOpen(true)}
       />
 
-      <div className={`flex flex-col ${user ? "lg:flex-row lg:gap-6" : ""}`}>
+      <div className="flex gap-8 mt-8">
         <MainContent
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -704,7 +794,7 @@ export default function Home() {
             setIsMediaModalOpen(true);
           }}
           onDeleteMedia={(id) => {
-            const item = mediaItems.find((i) => i.id === id);
+            const item = mediaItems.find((m) => m.id === id);
             if (item) {
               setSelectedMediaItem(item);
               setIsDeleteMediaModalOpen(true);
@@ -722,6 +812,10 @@ export default function Home() {
             }
           }}
           groupContentByDate={groupContentByDate}
+          isLoading={loading}
+          toolsLoading={toolsLoading}
+          promptsLoading={promptsLoading}
+          mediaLoading={mediaLoading}
         />
 
         {user && (
@@ -739,46 +833,63 @@ export default function Home() {
                 setIsDeleteNoteModalOpen(true);
               }
             }}
+            isLoading={notesLoading}
           />
         )}
       </div>
 
-      <AddToolModal
-        open={isAddModalOpen && activeTab === "tools"}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddTool}
-      />
+      <Suspense fallback={null}>
+        {isLoginModalOpen && (
+          <LoginModal
+            open={isLoginModalOpen}
+            onClose={() => setIsLoginModalOpen(false)}
+          />
+        )}
 
-      <PromptFormModal
-        isOpen={isAddModalOpen && activeTab === "prompts"}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddPrompt}
-        mode="add"
-        isProcessing={isProcessing}
-      />
+        {isAddModalOpen && activeTab === "tools" && (
+          <AddToolModal
+            open={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onAdd={handleAddTool}
+          />
+        )}
 
-      <AddMediaModal
-        isOpen={isAddModalOpen && activeTab === "media"}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddMediaItem}
-        initialData={null}
-        mode="add"
-        isProcessing={isProcessing}
-      />
+        {isAddModalOpen && activeTab === "prompts" && (
+          <PromptFormModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onSubmit={handleAddPrompt}
+            mode="add"
+            isProcessing={isProcessing}
+          />
+        )}
 
-      {selectedPrompt && (
-        <>
+        {isAddModalOpen && activeTab === "media" && (
+          <AddMediaModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onSubmit={handleAddMediaItem}
+            initialData={null}
+            mode="add"
+            isProcessing={isProcessing}
+          />
+        )}
+
+        {selectedPrompt && isEditModalOpen && (
           <PromptFormModal
             isOpen={isEditModalOpen}
             onClose={() => {
               setIsEditModalOpen(false);
               setSelectedPrompt(null);
             }}
-            initialData={selectedPrompt}
-            mode="edit"
             onSubmit={handleEditPrompt}
+            mode="edit"
+            initialData={selectedPrompt}
             isProcessing={isProcessing}
           />
+        )}
+
+        {selectedPrompt && isDeleteModalOpen && (
           <DeletePromptModal
             isOpen={isDeleteModalOpen}
             onClose={() => {
@@ -787,13 +898,11 @@ export default function Home() {
             }}
             onDelete={handleDeletePrompt}
             prompt={selectedPrompt}
-            isProcessing={isProcessing}
+            isProcessing={processingIds[selectedPrompt.id]}
           />
-        </>
-      )}
+        )}
 
-      {selectedMediaItem && (
-        <>
+        {selectedMediaItem && isMediaModalOpen && (
           <AddMediaModal
             isOpen={isMediaModalOpen}
             onClose={() => {
@@ -805,6 +914,9 @@ export default function Home() {
             mode="edit"
             isProcessing={isProcessing}
           />
+        )}
+
+        {selectedMediaItem && isDeleteMediaModalOpen && (
           <DeleteMediaModal
             isOpen={isDeleteMediaModalOpen}
             onClose={() => {
@@ -813,108 +925,44 @@ export default function Home() {
             }}
             onDelete={handleDeleteMediaItem}
             item={selectedMediaItem}
+            isProcessing={processingIds[selectedMediaItem.id]}
+          />
+        )}
+
+        {isAddNoteModalOpen && (
+          <AddNoteModal
+            isOpen={isAddNoteModalOpen}
+            onClose={() => setIsAddNoteModalOpen(false)}
+            onSubmit={handleAddNote}
             isProcessing={isProcessing}
           />
-        </>
-      )}
+        )}
 
-      <AddNoteModal
-        isOpen={isAddNoteModalOpen}
-        onClose={() => setIsAddNoteModalOpen(false)}
-        onSubmit={handleAddNote}
-        isProcessing={isProcessing}
-      />
-
-      {selectedNote && (
-        <>
+        {selectedNote && isEditNoteModalOpen && (
           <EditNoteModal
             isOpen={isEditNoteModalOpen}
             onClose={() => {
               setIsEditNoteModalOpen(false);
               setSelectedNote(null);
             }}
+            onSubmit={handleEditNote}
             initialContent={selectedNote.content}
-            onSubmit={async (content) => {
-              try {
-                const response = await fetch(`/api/notes/${selectedNote.id}`, {
-                  method: "PUT",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({ content }),
-                });
-
-                if (!response.ok) {
-                  throw new Error("Failed to update note");
-                }
-
-                await fetchNotes();
-                setIsEditNoteModalOpen(false);
-                setSelectedNote(null);
-                toast({
-                  title: "Success",
-                  description: "Note updated successfully",
-                  duration: 2000,
-                });
-              } catch (error: any) {
-                console.error("Error updating note:", error);
-                toast({
-                  title: "Error",
-                  description: error.message || "Failed to update note",
-                  variant: "destructive",
-                  duration: 2000,
-                });
-              }
-            }}
-            isProcessing={isProcessing}
+            isProcessing={processingIds[selectedNote.id]}
           />
+        )}
 
+        {selectedNote && isDeleteNoteModalOpen && (
           <DeleteNoteModal
             isOpen={isDeleteNoteModalOpen}
             onClose={() => {
               setIsDeleteNoteModalOpen(false);
               setSelectedNote(null);
             }}
-            onDelete={async () => {
-              try {
-                const response = await fetch(`/api/notes/${selectedNote.id}`, {
-                  method: "DELETE",
-                });
-
-                if (!response.ok) {
-                  throw new Error("Failed to delete note");
-                }
-
-                await fetchNotes();
-                setIsDeleteNoteModalOpen(false);
-                setSelectedNote(null);
-                toast({
-                  title: "Success",
-                  description: "Note deleted successfully",
-                  duration: 2000,
-                });
-              } catch (error: any) {
-                console.error("Error deleting note:", error);
-                toast({
-                  title: "Error",
-                  description: error.message || "Failed to delete note",
-                  variant: "destructive",
-                  duration: 2000,
-                });
-              }
-            }}
-            isProcessing={isProcessing}
+            onDelete={handleDeleteNote}
+            isProcessing={processingIds[selectedNote.id]}
           />
-        </>
-      )}
-
-      <LoginModal
-        open={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={() => {
-          checkUser();
-        }}
-      />
-    </main>
+        )}
+      </Suspense>
+    </div>
   );
 }

@@ -8,16 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  created_at: string;
-}
+import type { MediaItem } from "@/types";
 
 interface DeleteMediaModalProps {
   isOpen: boolean;

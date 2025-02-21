@@ -1,21 +1,11 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import MediaItem from "./MediaItem";
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
+import type { MediaItem as MediaItemType } from "@/types";
 
 interface SortableMediaItemProps {
-  item: MediaItem;
-  onEdit: (item: MediaItem) => void;
+  item: MediaItemType;
+  onEdit: (item: MediaItemType) => void;
   onDelete: (id: string) => void;
   isAdmin: boolean;
 }

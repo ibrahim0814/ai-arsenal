@@ -12,6 +12,7 @@ import {
   FileText,
   Newspaper,
   StickyNote,
+  LogIn,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -132,7 +133,7 @@ export function Header({
               className="sm:hidden"
               title="Sign In"
             >
-              <LogOut className="h-4 w-4 rotate-180" />
+              <LogIn className="h-4 w-4 rotate-180" />
             </Button>
             <Button onClick={onOpenLogin} className="hidden sm:flex">
               Sign In

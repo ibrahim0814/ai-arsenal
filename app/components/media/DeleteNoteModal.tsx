@@ -18,7 +18,7 @@ export function DeleteNoteModal({
   isOpen,
   onClose,
   onDelete,
-  isProcessing = false,
+  isProcessing,
 }: DeleteNoteModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

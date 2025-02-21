@@ -5,5 +5,5 @@ interface ToolsSearchProps {
 }
 
 export function ToolsSearch({ onSearch }: ToolsSearchProps) {
-  return <SearchBar onSearch={onSearch} className="w-full" />;
+  return <SearchBar onSearch={onSearch} />;
 }

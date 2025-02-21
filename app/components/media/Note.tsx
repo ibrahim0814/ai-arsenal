@@ -6,18 +6,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-  type: "note";
-}
+import type { Note as NoteType } from "@/types";
 
 interface NoteProps {
-  note: Note;
+  note: NoteType;
   onDelete?: (id: string) => void;
-  onEdit?: (note: Note) => void;
+  onEdit?: (note: NoteType) => void;
   isAdmin?: boolean;
   hideDate?: boolean;
   showTimeOnly?: boolean;

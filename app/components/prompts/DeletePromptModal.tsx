@@ -11,11 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface Prompt {
-  id: string;
-  title: string;
-}
-
 interface DeletePromptModalProps {
   isOpen: boolean;
   onClose: () => void;

@@ -32,7 +32,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn, formatTagLabel } from "@/lib/utils";
 import { TAG_OPTIONS } from "@/lib/constants";
-import { Tool } from "@/types/tool";
+import { Tool } from "@/types";
+import type { TagOption } from "@/types";
 
 interface EditToolModalProps {
   isOpen: boolean;
@@ -46,17 +47,6 @@ interface EditToolModalProps {
     isPersonalTool: boolean
   ) => Promise<void>;
   tool: Tool;
-}
-
-interface TagResponse {
-  value: string;
-  [key: string]: any;
-}
-
-interface TagOption {
-  value: string;
-  label: string;
-  color: string;
 }
 
 export function EditToolModal({

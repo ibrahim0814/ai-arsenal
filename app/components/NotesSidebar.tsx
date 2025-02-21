@@ -1,17 +1,13 @@
-import Note from "./media/Note";
-
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-  type: "note";
-}
+import { LoadingSpinner } from "./LoadingSpinner";
+import NoteComponent from "./media/Note";
+import { Note } from "@/types";
 
 interface NotesSidebarProps {
   notes: Note[];
   isAdmin: boolean;
   onEditNote: (note: Note) => void;
   onDeleteNote: (id: string) => void;
+  isLoading?: boolean;
 }
 
 export function NotesSidebar({
@@ -19,7 +15,16 @@ export function NotesSidebar({
   isAdmin,
   onEditNote,
   onDeleteNote,
+  isLoading = false,
 }: NotesSidebarProps) {
+  if (isLoading) {
+    return (
+      <div className="hidden lg:block lg:w-[30%]">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <div className="hidden lg:block lg:w-[30%] lg:sticky lg:top-4 mt-2">
       <div className="border rounded-lg bg-white overflow-hidden">
@@ -31,12 +36,12 @@ export function NotesSidebar({
         </div>
         <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
           {notes.map((note) => (
-            <Note
+            <NoteComponent
               key={note.id}
               note={note}
               isAdmin={isAdmin}
-              onEdit={onEditNote}
-              onDelete={onDeleteNote}
+              onEdit={() => onEditNote(note)}
+              onDelete={() => onDeleteNote(note.id)}
             />
           ))}
         </div>

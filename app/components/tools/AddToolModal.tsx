@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { cn, formatTagLabel } from "@/lib/utils";
+import type { TagOption } from "@/types";
 
 interface AddToolModalProps {
   open: boolean;
@@ -43,12 +44,6 @@ interface AddToolModalProps {
     tags: string[],
     isPersonalTool: boolean
   ) => Promise<void>;
-}
-
-interface TagOption {
-  value: string;
-  label: string;
-  color: string;
 }
 
 export function AddToolModal({ open, onClose, onAdd }: AddToolModalProps) {

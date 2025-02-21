@@ -11,24 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { Tweet } from "react-tweet";
 import YouTubeEmbed from "./YouTubeEmbed";
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
-
-interface Preview {
-  title: string;
-  description: string;
-  type: "article" | "tweet" | "youtube" | "other";
-  videoId?: string;
-}
+import type { Preview, MediaItem } from "@/types";
 
 interface AddMediaModalProps {
   isOpen: boolean;

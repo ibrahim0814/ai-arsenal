@@ -12,17 +12,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { SortableMediaItem } from "./SortableMediaItem";
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
+import type { MediaItem } from "@/types";
 
 interface MediaGridProps {
   items: MediaItem[];

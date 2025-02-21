@@ -9,39 +9,22 @@ import {
 import { MediaGrid } from "./MediaGrid";
 import MediaItem from "./MediaItem";
 import DailySummaryCard from "./DailySummaryCard";
-import Note from "./Note";
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
-
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-  type: "note";
-}
+import NoteComponent from "./Note";
+import type { MediaItem as MediaItemType, Note, ContentItem } from "@/types";
 
 interface MediaTabsProps {
-  mediaItems: MediaItem[];
+  mediaItems: MediaItemType[];
   notes: Note[];
   isAdmin: boolean;
   user: any;
-  onEditMedia: (item: MediaItem) => void;
+  onEditMedia: (item: MediaItemType) => void;
   onDeleteMedia: (id: string) => void;
   onEditNote: (note: Note) => void;
   onDeleteNote: (id: string) => void;
   groupContentByDate: (
-    mediaItems: MediaItem[],
+    mediaItems: MediaItemType[],
     notes: Note[]
-  ) => { date: string; items: (MediaItem | Note)[] }[];
+  ) => { date: string; items: ContentItem[] }[];
 }
 
 export function MediaTabs({
@@ -162,7 +145,7 @@ export function MediaTabs({
           </div>
           <div className="p-4 space-y-2.5 overflow-y-auto max-h-[calc(100vh-10rem)]">
             {notes.map((note) => (
-              <Note
+              <NoteComponent
                 key={note.id}
                 note={note}
                 isAdmin={isAdmin}

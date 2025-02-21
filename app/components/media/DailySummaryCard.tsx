@@ -2,34 +2,19 @@ import { Calendar } from "lucide-react";
 import Note from "./Note";
 import MediaItem from "./MediaItem";
 import { toPacificDate } from "@/utils/date";
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
-
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-  type: "note";
-}
-
-type ContentItem = MediaItem | Note;
+import type {
+  MediaItem as MediaItemType,
+  Note as NoteType,
+  ContentItem,
+} from "@/types";
 
 interface DailySummaryCardProps {
   date: string;
   items: ContentItem[];
   isAdmin?: boolean;
-  onEditNote?: (note: Note) => void;
+  onEditNote?: (note: NoteType) => void;
   onDeleteNote?: (id: string) => void;
-  onEditMedia?: (item: MediaItem) => void;
+  onEditMedia?: (item: MediaItemType) => void;
   onDeleteMedia?: (id: string) => void;
 }
 

@@ -1,4 +1,4 @@
-import { Tool } from "@/types/tool";
+import { Tool } from "@/types";
 import ToolItem from "./ToolItem";
 import { Loader2 } from "lucide-react";
 

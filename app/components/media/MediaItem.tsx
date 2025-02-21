@@ -1,3 +1,4 @@
+import type { MediaItem as MediaItemType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -11,6 +12,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface MediaItemProps {
+  item: MediaItemType;
+  onEdit?: (item: MediaItemType) => void;
+  onDelete?: (id: string) => void;
+  isAdmin: boolean;
+  hideDate?: boolean;
+  showTimeOnly?: boolean;
+}
+
 interface MediaItem {
   id: string;
   title: string;
@@ -20,15 +30,6 @@ interface MediaItem {
   embedHtml?: string;
   videoId?: string;
   created_at: string;
-}
-
-interface MediaItemProps {
-  item: MediaItem;
-  onEdit?: (item: MediaItem) => void;
-  onDelete?: (id: string) => void;
-  isAdmin: boolean;
-  hideDate?: boolean;
-  showTimeOnly?: boolean;
 }
 
 const styles = `
@@ -42,8 +43,8 @@ export default function MediaItem({
   onEdit,
   onDelete,
   isAdmin,
-  hideDate,
-  showTimeOnly,
+  hideDate = false,
+  showTimeOnly = false,
 }: MediaItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

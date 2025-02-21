@@ -5,7 +5,7 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { EditToolModal } from "./EditToolModal";
 import { Badge } from "@/components/ui/badge";
 import { formatTagLabel } from "@/lib/utils";
-import { Tool } from "@/types/tool";
+import { Tool } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,

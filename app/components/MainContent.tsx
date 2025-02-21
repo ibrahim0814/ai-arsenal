@@ -3,35 +3,9 @@ import { Wrench, FileText, Newspaper } from "lucide-react";
 import { ToolsContent } from "./tools/ToolsContent";
 import { PromptsContent } from "./prompts/PromptsContent";
 import { MediaTabs } from "./media/MediaTabs";
-import { Tool } from "@/types/tool";
+import { Tool, Prompt, MediaItem, Note, ContentItem } from "@/types";
 import { ToolsSearch } from "./tools/ToolsSearch";
-
-interface Prompt {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MediaItem {
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-  type: "article" | "tweet" | "youtube" | "other";
-  embedHtml?: string;
-  videoId?: string;
-  created_at: string;
-}
-
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-  type: "note";
-}
+import { LoadingSpinner } from "./LoadingSpinner";
 
 interface MainContentProps {
   activeTab: string;
@@ -64,7 +38,11 @@ interface MainContentProps {
   groupContentByDate: (
     mediaItems: MediaItem[],
     notes: Note[]
-  ) => { date: string; items: (MediaItem | Note)[] }[];
+  ) => { date: string; items: ContentItem[] }[];
+  isLoading?: boolean;
+  toolsLoading?: boolean;
+  promptsLoading?: boolean;
+  mediaLoading?: boolean;
 }
 
 export function MainContent({
@@ -89,13 +67,21 @@ export function MainContent({
   onEditNote,
   onDeleteNote,
   groupContentByDate,
+  isLoading = false,
+  toolsLoading = false,
+  promptsLoading = false,
+  mediaLoading = false,
 }: MainContentProps) {
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
       <Tabs value={activeTab} onValueChange={onTabChange}>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between w-full">
-            <TabsList className="flex overflow-x-auto">
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex justify-between items-center">
+            <TabsList className="flex justify-start">
               <TabsTrigger value="tools" className="min-w-[100px]">
                 <Wrench className="h-4 w-4 mr-2" />
                 Tools
@@ -110,47 +96,64 @@ export function MainContent({
               </TabsTrigger>
             </TabsList>
             {activeTab === "tools" && (
-              <div className="w-full sm:w-[300px]">
+              <div className="hidden md:block w-[300px]">
                 <ToolsSearch onSearch={onSearch} />
               </div>
             )}
           </div>
+          {activeTab === "tools" && (
+            <div className="md:hidden">
+              <ToolsSearch onSearch={onSearch} />
+            </div>
+          )}
         </div>
 
         <TabsContent value="tools">
-          <ToolsContent
-            tools={tools}
-            searchResults={searchResults}
-            isSearching={isSearching}
-            onSearch={onSearch}
-            onEdit={onEditTool}
-            onDelete={onDeleteTool}
-            isAdmin={isAdmin}
-          />
+          {toolsLoading ? (
+            <LoadingSpinner />
+          ) : (
+            <ToolsContent
+              tools={tools}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onSearch={onSearch}
+              onEdit={onEditTool}
+              onDelete={onDeleteTool}
+              isAdmin={isAdmin}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="prompts">
-          <PromptsContent
-            prompts={prompts}
-            isAdmin={isAdmin}
-            processingIds={processingIds}
-            onEdit={onEditPrompt}
-            onDelete={onDeletePrompt}
-          />
+          {promptsLoading ? (
+            <LoadingSpinner />
+          ) : (
+            <PromptsContent
+              prompts={prompts}
+              isAdmin={isAdmin}
+              processingIds={processingIds}
+              onEdit={onEditPrompt}
+              onDelete={onDeletePrompt}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="media">
-          <MediaTabs
-            mediaItems={mediaItems}
-            notes={notes}
-            isAdmin={isAdmin}
-            user={user}
-            onEditMedia={onEditMedia}
-            onDeleteMedia={onDeleteMedia}
-            onEditNote={onEditNote}
-            onDeleteNote={onDeleteNote}
-            groupContentByDate={groupContentByDate}
-          />
+          {mediaLoading ? (
+            <LoadingSpinner />
+          ) : (
+            <MediaTabs
+              mediaItems={mediaItems}
+              notes={notes}
+              isAdmin={isAdmin}
+              user={user}
+              onEditMedia={onEditMedia}
+              onDeleteMedia={onDeleteMedia}
+              onEditNote={onEditNote}
+              onDeleteNote={onDeleteNote}
+              groupContentByDate={groupContentByDate}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
