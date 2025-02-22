@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
@@ -27,7 +27,7 @@ interface ToolItemProps {
   isAdmin: boolean;
 }
 
-export default function ToolItem({
+const ToolItem = memo(function ToolItem({
   tool,
   onDelete,
   onEdit,
@@ -36,35 +36,38 @@ export default function ToolItem({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     await onDelete(tool.id);
-  };
+  }, [onDelete, tool.id]);
 
-  const renderActions = () => (
-    <div className="absolute top-2 right-2 z-10">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-red-600 dark:text-red-400"
-            onClick={() => setIsDeleteDialogOpen(true)}
-          >
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+  const renderActions = useCallback(
+    () => (
+      <div className="absolute top-2 right-2 z-10">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600 dark:text-red-400"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    ),
+    []
   );
 
   return (
@@ -119,4 +122,6 @@ export default function ToolItem({
       />
     </div>
   );
-}
+});
+
+export default ToolItem;

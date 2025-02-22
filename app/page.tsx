@@ -226,6 +226,19 @@ export default function Home() {
     initializeApp();
   }, []);
 
+  // Check authentication state on mount
+  useEffect(() => {
+    const checkAuthState = async () => {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      if (currentUser) {
+        const adminStatus = await isAdmin(currentUser);
+        setIsUserAdmin(adminStatus);
+      }
+    };
+    checkAuthState();
+  }, []);
+
   async function checkUser() {
     const currentUser = await getCurrentUser();
     setUser(currentUser);
@@ -902,11 +915,13 @@ export default function Home() {
             onLoginSuccess={async () => {
               setContentLoading(true);
               try {
-                // First check and set user so sidebar appears immediately
                 const currentUser = await getCurrentUser();
                 setUser(currentUser);
-                // Then load notes in background
-                await fetchNotes();
+                if (currentUser) {
+                  const adminStatus = await isAdmin(currentUser);
+                  setIsUserAdmin(adminStatus);
+                  await fetchNotes();
+                }
               } finally {
                 setContentLoading(false);
                 setIsLoginModalOpen(false);
