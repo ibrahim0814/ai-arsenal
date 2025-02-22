@@ -364,6 +364,7 @@ export default function Home() {
       }
 
       setTools((prevTools) => [data, ...prevTools]);
+      setActiveTab("tools");
     } catch (error: any) {
       console.error("Error in handleAddTool:", error);
       throw new Error(error.message || "Failed to create tool");
@@ -469,6 +470,7 @@ export default function Home() {
 
       setIsAddModalOpen(false);
       await fetchPublicData();
+      setActiveTab("prompts");
     } catch (error: any) {
       console.error("Error in handleAddPrompt:", error);
       toast({
@@ -576,6 +578,7 @@ export default function Home() {
 
       setIsAddModalOpen(false);
       await fetchPublicData();
+      setActiveTab("media");
     } catch (error: any) {
       console.error("Error in handleAddMediaItem:", error);
       toast({
