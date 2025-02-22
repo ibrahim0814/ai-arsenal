@@ -120,7 +120,12 @@ export function AddMediaModal({
     if (!preview) return;
 
     const title = showEdit ? editedTitle : preview.title;
-    const description = showEdit ? editedDescription : preview.description;
+    const description =
+      preview.type === "youtube"
+        ? ""
+        : showEdit
+        ? editedDescription
+        : preview.description;
     const type = preview.type;
 
     await onSubmit(title, url, description, type);
@@ -206,15 +211,17 @@ export function AddMediaModal({
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <Textarea
-                    value={editedDescription}
-                    onChange={(e) => setEditedDescription(e.target.value)}
-                    placeholder="Enter description"
-                    className="min-h-[200px]"
-                  />
-                </div>
+                {preview?.type !== "youtube" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      value={editedDescription}
+                      onChange={(e) => setEditedDescription(e.target.value)}
+                      placeholder="Enter description"
+                      className="min-h-[200px]"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

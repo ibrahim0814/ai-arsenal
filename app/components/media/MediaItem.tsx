@@ -144,23 +144,25 @@ export default function MediaItem({
       <div className="relative w-full border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
         {isAdmin && renderActions()}
         <div className="p-4">
-          <div className="w-full mb-3">
+          <div>
+            <h3 className="text-xl font-semibold text-foreground mb-3">
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                {item.title}
+              </a>
+            </h3>
+          </div>
+          <div className="w-full">
             {item.videoId ? (
               <YouTubeEmbed videoId={item.videoId} />
             ) : (
               <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                 <p className="text-muted-foreground">Video not available</p>
               </div>
-            )}
-          </div>
-          <div>
-            <h3 className="font-medium text-base text-foreground">
-              {item.title}
-            </h3>
-            {item.description && (
-              <p className="text-muted-foreground text-sm mt-2">
-                {item.description}
-              </p>
             )}
           </div>
         </div>
@@ -176,9 +178,16 @@ export default function MediaItem({
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-xl font-semibold text-foreground">
-                {item.title}
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  {item.title}
+                </a>
               </h3>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
                 {item.description}
               </p>
             </div>

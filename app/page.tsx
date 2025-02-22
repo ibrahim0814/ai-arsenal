@@ -902,7 +902,10 @@ export default function Home() {
             onLoginSuccess={async () => {
               setContentLoading(true);
               try {
-                await checkUser();
+                // First check and set user so sidebar appears immediately
+                const currentUser = await getCurrentUser();
+                setUser(currentUser);
+                // Then load notes in background
                 await fetchNotes();
               } finally {
                 setContentLoading(false);

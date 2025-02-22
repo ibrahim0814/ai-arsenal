@@ -46,10 +46,10 @@ export function Header({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="icon"
                   className="sm:hidden"
-                  title="Add Item"
+                  title="Add"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -57,22 +57,22 @@ export function Header({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onOpenAddModal("tools")}>
                   <Wrench className="h-4 w-4 mr-2" />
-                  Add Tool
+                  Tool
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onOpenAddModal("prompts")}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Add Prompt
+                  Prompt
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onOpenAddModal("media")}>
                   <Newspaper className="h-4 w-4 mr-2" />
-                  Add Media
+                  Media
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             {user && (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={onOpenAddNote}
                 size="icon"
                 className="sm:hidden"
@@ -84,35 +84,35 @@ export function Header({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="hidden sm:flex">
+                <Button variant="secondary" className="hidden sm:flex">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Item
+                  Add
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onOpenAddModal("tools")}>
                   <Wrench className="h-4 w-4 mr-2" />
-                  Add Tool
+                  Tool
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onOpenAddModal("prompts")}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Add Prompt
+                  Prompt
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onOpenAddModal("media")}>
                   <Newspaper className="h-4 w-4 mr-2" />
-                  Add Media
+                  Media
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             {user && (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={onOpenAddNote}
                 className="hidden sm:flex"
               >
                 <StickyNote className="h-4 w-4 mr-2" />
-                Quick Note
+                Note
               </Button>
             )}
           </>

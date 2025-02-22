@@ -119,7 +119,14 @@ export async function POST(request: Request) {
         content = $("[data-testid='tweetText']").text().trim();
         break;
       case "youtube":
-        content = $("meta[name='description']").attr("content") || "";
+        // For YouTube, just get the title and leave description empty
+        title =
+          $("meta[property='og:title']").attr("content") ||
+          $("meta[name='title']").attr("content") ||
+          $("title").text();
+        // Clean up title by removing channel name and other suffixes
+        title = title.split(/[-|]/)[0].trim();
+        description = ""; // Leave description empty for YouTube videos
         break;
       default:
         content = $("body").text().trim();
@@ -128,7 +135,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       type,
       title: title.trim(),
-      description: description || content,
+      description: type === "youtube" ? "" : description || content,
       url,
       videoId,
     });

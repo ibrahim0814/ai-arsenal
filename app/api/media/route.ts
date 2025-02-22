@@ -188,7 +188,7 @@ export async function POST(request: Request) {
       data: {
         title,
         url,
-        description: finalDescription,
+        description: type === "youtube" ? "" : finalDescription,
         type,
         embed_html: embedHtml,
         video_id: finalVideoId,

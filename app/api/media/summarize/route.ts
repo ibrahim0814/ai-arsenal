@@ -44,9 +44,9 @@ export async function POST(request: Request) {
     // Prepare the prompt based on content type
     let prompt = "";
     if (type === "article") {
-      prompt = `Please provide a clear and concise summary of the following article, focusing on the main points and key takeaways. Keep the summary informative but brief (2-3 paragraphs maximum):\n\n${truncatedContent}`;
+      prompt = `Please provide a clear and concise summary of the following article, focusing on the main points and key takeaways. Keep the summary informative but brief (2-3 paragraphs maximum). Do not use any formatting like Markdown, asterisks, or special characters - just plain text with paragraph breaks:\n\n${truncatedContent}`;
     } else {
-      prompt = `Please provide a brief summary of the following content:\n\n${truncatedContent}`;
+      prompt = `Please provide a brief summary of the following content. Use plain text only without any formatting:\n\n${truncatedContent}`;
     }
 
     const completion = await openai.chat.completions.create({
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "You are a helpful assistant that creates clear, accurate summaries of content. Focus on the main points and key takeaways.",
+            "You are a helpful assistant that creates clear, accurate summaries of content. Focus on the main points and key takeaways. Always use plain text without any formatting or special characters.",
         },
         {
           role: "user",
