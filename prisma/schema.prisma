@@ -72,3 +72,13 @@ model Note {
 
   @@map("notes")
 }
+
+model Backup {
+  id        String   @id @default(uuid()) @db.Uuid
+  timestamp DateTime @default(now()) @db.Timestamptz
+  summary   Json
+  data      Json
+
+  @@map("backups")
+  @@index([timestamp(sort: Desc)])
+}
