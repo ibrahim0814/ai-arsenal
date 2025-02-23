@@ -119,13 +119,37 @@ export async function POST(request: Request) {
         content = $("[data-testid='tweetText']").text().trim();
         break;
       case "youtube":
-        // For YouTube, just get the title and leave description empty
-        title =
-          $("meta[property='og:title']").attr("content") ||
-          $("meta[name='title']").attr("content") ||
-          $("title").text();
+        // For YouTube, get the title from multiple potential sources
+        title = $("meta[property='og:title']").attr("content") ||
+                $("meta[name='title']").attr("content") ||
+                $("meta[property='twitter:title']").attr("content") ||
+                $("title").text();
+
         // Clean up title by removing channel name and other suffixes
-        title = title.split(/[-|]/)[0].trim();
+        // Handle various YouTube title formats:
+        // - "Video Title - Channel Name"
+        // - "Video Title | Channel Name"
+        // - "Video Title by Channel Name"
+        // - "Video Title • Channel Name"
+        title = title
+          .split(/[-|•]|\sby\s/)[0]
+          .replace(/\s*\(\d{4}\)$/, '') // Remove year if present
+          .replace(/\s*\[.*?\]$/, '') // Remove bracketed text at end
+          .trim();
+
+        // If title is empty or too short, try getting it from schema.org metadata
+        if (!title || title.length < 3) {
+          const schemaScript = $('script[type="application/ld+json"]').text();
+          try {
+            const schemaData = JSON.parse(schemaScript);
+            if (schemaData && schemaData.name) {
+              title = schemaData.name;
+            }
+          } catch (e) {
+            console.error('Failed to parse schema.org data:', e);
+          }
+        }
+
         description = ""; // Leave description empty for YouTube videos
         break;
       default:
