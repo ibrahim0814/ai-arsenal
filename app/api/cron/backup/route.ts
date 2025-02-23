@@ -12,6 +12,8 @@ const TABLES_TO_BACKUP = [
   "profiles",
 ];
 
+const MAX_BACKUPS = 3;
+
 export const runtime = "edge";
 
 async function backupTable(supabase: any, tableName: string) {
@@ -39,6 +41,43 @@ async function backupTable(supabase: any, tableName: string) {
   }
 }
 
+async function deleteOldestBackupIfNeeded(supabase: any) {
+  try {
+    // Get count of backups
+    const { count, error: countError } = await supabase
+      .from("backups")
+      .select("*", { count: "exact", head: true });
+
+    if (countError) throw countError;
+
+    // If we already have MAX_BACKUPS or more, delete the oldest one
+    if (count >= MAX_BACKUPS) {
+      // Get the ID of the oldest backup
+      const { data: oldestBackup, error: selectError } = await supabase
+        .from("backups")
+        .select("id")
+        .order("timestamp", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (selectError) throw selectError;
+
+      // Delete the oldest backup
+      const { error: deleteError } = await supabase
+        .from("backups")
+        .delete()
+        .eq("id", oldestBackup.id);
+
+      if (deleteError) throw deleteError;
+
+      console.log(`Deleted oldest backup with ID: ${oldestBackup.id}`);
+    }
+  } catch (error) {
+    console.error("Error managing old backups:", error);
+    throw error;
+  }
+}
+
 export async function GET(request: Request) {
   // Verify the request is from Vercel Cron
   const authHeader = request.headers.get("authorization");
@@ -47,12 +86,17 @@ export async function GET(request: Request) {
   }
 
   try {
+    console.log("Starting backup process...");
     const supabase = createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY! // Using service role key for full access
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    // Delete oldest backup if needed before creating new one
+    await deleteOldestBackupIfNeeded(supabase);
+
     // Backup all tables
+    console.log("Starting table backups...");
     const backupResults = await Promise.all(
       TABLES_TO_BACKUP.map((table) => backupTable(supabase, table))
     );
@@ -60,6 +104,10 @@ export async function GET(request: Request) {
     // Organize results
     const successful = backupResults.filter((result) => result.success);
     const failed = backupResults.filter((result) => !result.success);
+
+    if (failed.length > 0) {
+      console.error("Failed backups:", failed);
+    }
 
     // Create summary
     const summary = {
@@ -90,7 +138,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Backup process failed:", error);
     return NextResponse.json(
-      { error: "Backup process failed" },
+      {
+        error: "Backup process failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
