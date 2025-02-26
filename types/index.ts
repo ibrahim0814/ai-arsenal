@@ -26,6 +26,7 @@ export interface MediaItem {
   type: "article" | "tweet" | "youtube" | "other";
   embedHtml?: string;
   videoId?: string;
+  comment?: string;
   created_at: string;
 }
 

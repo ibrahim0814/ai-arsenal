@@ -20,7 +20,8 @@ interface AddMediaModalProps {
     title: string,
     url: string,
     description: string,
-    type: string
+    type: string,
+    comment?: string
   ) => Promise<void>;
   initialData: MediaItem | null;
   mode?: "add" | "edit";
@@ -43,6 +44,7 @@ export function AddMediaModal({
   const [editedDescription, setEditedDescription] = useState(
     initialData?.description || ""
   );
+  const [comment, setComment] = useState(initialData?.comment || "");
 
   const clearState = () => {
     setUrl("");
@@ -50,6 +52,7 @@ export function AddMediaModal({
     setShowEdit(false);
     setEditedTitle("");
     setEditedDescription("");
+    setComment("");
     setIsLoadingPreview(false);
   };
 
@@ -63,6 +66,7 @@ export function AddMediaModal({
       setUrl(initialData.url);
       setEditedTitle(initialData.title);
       setEditedDescription(initialData.description || "");
+      setComment(initialData.comment || "");
       setShowEdit(true);
       setPreview({
         title: initialData.title,
@@ -119,16 +123,21 @@ export function AddMediaModal({
     e.preventDefault();
     if (!preview) return;
 
-    const title = showEdit ? editedTitle : preview.title;
-    const description =
-      preview.type === "youtube"
-        ? ""
+    const title =
+      preview.type === "tweet"
+        ? "Tweet"
         : showEdit
-        ? editedDescription
-        : preview.description;
+        ? editedTitle
+        : preview.title;
+    const description =
+      preview.type === "article"
+        ? showEdit
+          ? editedDescription
+          : preview.description
+        : "";
     const type = preview.type;
 
-    await onSubmit(title, url, description, type);
+    await onSubmit(title, url, description, type, comment);
     if (mode === "add") {
       clearState();
     }
@@ -195,6 +204,18 @@ export function AddMediaModal({
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
+
+            {showEdit && (
+              <div className="mt-4">
+                <label className="text-sm font-medium">Personal Comment</label>
+                <Input
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Add your personal notes about this item (optional)"
+                  className="mt-1.5"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-6">
@@ -202,25 +223,33 @@ export function AddMediaModal({
 
             {showEdit && (
               <div className="space-y-4 mt-4 pb-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Title</label>
-                  <Input
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    placeholder="Enter title"
-                    required
-                  />
-                </div>
-                {preview?.type !== "youtube" && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Textarea
-                      value={editedDescription}
-                      onChange={(e) => setEditedDescription(e.target.value)}
-                      placeholder="Enter description"
-                      className="min-h-[200px]"
-                    />
-                  </div>
+                {preview && (
+                  <>
+                    {(preview.type as string) !== "tweet" && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Title</label>
+                        <Input
+                          value={editedTitle}
+                          onChange={(e) => setEditedTitle(e.target.value)}
+                          placeholder="Enter title"
+                          required={(preview.type as string) !== "tweet"}
+                        />
+                      </div>
+                    )}
+                    {preview.type === "article" && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Description
+                        </label>
+                        <Textarea
+                          value={editedDescription}
+                          onChange={(e) => setEditedDescription(e.target.value)}
+                          placeholder="Enter description"
+                          className="min-h-[200px]"
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

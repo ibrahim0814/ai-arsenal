@@ -555,7 +555,8 @@ export default function Home() {
     title: string,
     url: string,
     description: string,
-    type: string
+    type: string,
+    comment?: string
   ) {
     setIsProcessing(true);
     try {
@@ -569,6 +570,7 @@ export default function Home() {
           title,
           description,
           type,
+          comment,
         }),
       });
 
@@ -595,7 +597,8 @@ export default function Home() {
     title: string,
     url: string,
     description: string,
-    type: string
+    type: string,
+    comment?: string
   ) {
     if (!selectedMediaItem) return;
     setIsProcessing(true);
@@ -611,6 +614,7 @@ export default function Home() {
           url,
           description,
           type,
+          comment,
         }),
       });
 

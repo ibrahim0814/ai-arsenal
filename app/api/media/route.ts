@@ -109,6 +109,7 @@ export async function GET() {
         type: true,
         embed_html: true,
         video_id: true,
+        comment: true,
         created_at: true,
         updated_at: true,
       },
@@ -140,14 +141,12 @@ export async function POST(request: Request) {
       type: providedType,
       embedHtml,
       videoId: providedVideoId,
+      comment,
     } = await request.json();
 
-    // Validate input
-    if (!title || !url) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    // Validate input - title is only required for non-tweet types
+    if (!url) {
+      return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
     // Detect media type from URL if not provided or validate provided type
@@ -156,6 +155,17 @@ export async function POST(request: Request) {
       providedType && VALID_TYPES.includes(providedType as MediaType)
         ? providedType
         : detectedType;
+
+    // For tweets, we don't require a title
+    if (!title && type !== "tweet") {
+      return NextResponse.json(
+        { error: "Title is required for non-tweet media items" },
+        { status: 400 }
+      );
+    }
+
+    // Use a default title for tweets if not provided
+    const finalTitle = title || (type === "tweet" ? "Tweet" : "");
 
     // Extract video ID for YouTube URLs
     let finalVideoId = providedVideoId;
@@ -172,9 +182,9 @@ export async function POST(request: Request) {
       finalVideoId = finalVideoId?.split("&")[0];
     }
 
-    // Generate summary if no description provided
+    // Generate summary if no description provided and not a tweet
     let finalDescription = description;
-    if (!finalDescription) {
+    if (!finalDescription && type === "article") {
       const content = await fetchAndSummarizeContent(url, type as MediaType);
       finalDescription = content;
     }
@@ -186,12 +196,13 @@ export async function POST(request: Request) {
 
     const mediaItem = await prisma.mediaItem.create({
       data: {
-        title,
+        title: finalTitle,
         url,
-        description: type === "youtube" ? "" : finalDescription,
+        description: type === "article" ? finalDescription : "",
         type,
         embed_html: embedHtml,
         video_id: finalVideoId,
+        comment,
         created_at: pacificTime,
         updated_at: pacificTime,
       },

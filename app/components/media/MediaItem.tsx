@@ -29,6 +29,7 @@ interface MediaItem {
   type: "article" | "tweet" | "youtube" | "other";
   embedHtml?: string;
   videoId?: string;
+  comment?: string;
   created_at: string;
 }
 
@@ -129,6 +130,13 @@ export default function MediaItem({
       <div className="relative w-full border rounded-lg bg-card text-card-foreground dark:bg-gray-900 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
         {isAdmin && renderActions()}
         <div className="p-4">
+          {item.comment && (
+            <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                <span className="font-medium">Comment:</span> {item.comment}
+              </p>
+            </div>
+          )}
           <div className="flex justify-center">
             <div className="tweet-no-date">
               <Tweet id={getTweetId(item.url)} />
@@ -156,6 +164,13 @@ export default function MediaItem({
               </a>
             </h3>
           </div>
+          {item.comment && (
+            <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                <span className="font-medium">Comment:</span> {item.comment}
+              </p>
+            </div>
+          )}
           <div className="w-full">
             {item.videoId ? (
               <YouTubeEmbed videoId={item.videoId} />
@@ -187,9 +202,18 @@ export default function MediaItem({
                   {item.title}
                 </a>
               </h3>
-              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
-                {item.description}
-              </p>
+              {item.comment && (
+                <div className="mt-2 mb-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                    <span className="font-medium">Comment:</span> {item.comment}
+                  </p>
+                </div>
+              )}
+              {item.type === "article" && item.description && (
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
+                  {item.description}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5">

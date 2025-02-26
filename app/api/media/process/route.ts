@@ -120,10 +120,11 @@ export async function POST(request: Request) {
         break;
       case "youtube":
         // For YouTube, get the title from multiple potential sources
-        title = $("meta[property='og:title']").attr("content") ||
-                $("meta[name='title']").attr("content") ||
-                $("meta[property='twitter:title']").attr("content") ||
-                $("title").text();
+        title =
+          $("meta[property='og:title']").attr("content") ||
+          $("meta[name='title']").attr("content") ||
+          $("meta[property='twitter:title']").attr("content") ||
+          $("title").text();
 
         // Clean up title by removing channel name and other suffixes
         // Handle various YouTube title formats:
@@ -133,8 +134,8 @@ export async function POST(request: Request) {
         // - "Video Title • Channel Name"
         title = title
           .split(/[-|•]|\sby\s/)[0]
-          .replace(/\s*\(\d{4}\)$/, '') // Remove year if present
-          .replace(/\s*\[.*?\]$/, '') // Remove bracketed text at end
+          .replace(/\s*\(\d{4}\)$/, "") // Remove year if present
+          .replace(/\s*\[.*?\]$/, "") // Remove bracketed text at end
           .trim();
 
         // If title is empty or too short, try getting it from schema.org metadata
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
               title = schemaData.name;
             }
           } catch (e) {
-            console.error('Failed to parse schema.org data:', e);
+            console.error("Failed to parse schema.org data:", e);
           }
         }
 
@@ -159,7 +160,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       type,
       title: title.trim(),
-      description: type === "youtube" ? "" : description || content,
+      description: type === "article" ? description || content : "",
       url,
       videoId,
     });

@@ -58,6 +58,7 @@ model MediaItem {
   type        String   // Must be one of: "article", "tweet", "youtube", "other"
   embed_html  String?
   video_id    String?
+  comment     String?  // User's personal comment about the media item
   created_at  DateTime @default(now()) @db.Timestamptz
   updated_at  DateTime @default(now()) @db.Timestamptz
 

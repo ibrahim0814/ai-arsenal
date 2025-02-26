@@ -6,22 +6,34 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { title, url, description, type } = await request.json();
+    const { title, url, description, type, comment } = await request.json();
 
-    if (!title || !url || !type) {
+    if (!url || !type) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
+    // For tweets, we don't require a title
+    if (!title && type !== "tweet") {
+      return NextResponse.json(
+        { error: "Title is required for non-tweet media items" },
+        { status: 400 }
+      );
+    }
+
+    // Use a default title for tweets if not provided
+    const finalTitle = title || (type === "tweet" ? "Tweet" : "");
+
     const updatedMedia = await prisma.mediaItem.update({
       where: { id: params.id },
       data: {
-        title,
+        title: finalTitle,
         url,
         description,
         type,
+        comment,
         updated_at: new Date(),
       },
     });
