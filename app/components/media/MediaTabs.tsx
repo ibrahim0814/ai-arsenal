@@ -44,19 +44,34 @@ export function MediaTabs({
         <TabsList className="w-full sm:w-fit">
           <TabsTrigger value="all" className="flex-1 sm:flex-initial">
             <LayoutGrid className="h-4 w-4" />
+            <span className="ml-1 text-xs text-muted-foreground">
+              ({mediaItems.length + (user ? notes.length : 0)})
+            </span>
           </TabsTrigger>
           <TabsTrigger value="article" className="flex-1 sm:flex-initial">
             <Newspaper className="h-4 w-4" />
+            <span className="ml-1 text-xs text-muted-foreground">
+              ({mediaItems.filter((item) => item.type === "article").length})
+            </span>
           </TabsTrigger>
           <TabsTrigger value="tweet" className="flex-1 sm:flex-initial">
             <Twitter className="h-4 w-4" />
+            <span className="ml-1 text-xs text-muted-foreground">
+              ({mediaItems.filter((item) => item.type === "tweet").length})
+            </span>
           </TabsTrigger>
           <TabsTrigger value="youtube" className="flex-1 sm:flex-initial">
             <Youtube className="h-4 w-4" />
+            <span className="ml-1 text-xs text-muted-foreground">
+              ({mediaItems.filter((item) => item.type === "youtube").length})
+            </span>
           </TabsTrigger>
           {user && (
             <TabsTrigger value="notes" className="flex-1 sm:flex-initial">
               <StickyNote className="h-4 w-4" />
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({notes.length})
+              </span>
             </TabsTrigger>
           )}
         </TabsList>
