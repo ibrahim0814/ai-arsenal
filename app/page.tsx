@@ -1000,7 +1000,7 @@ export default function Home() {
           <AddEditNoteModal
             isOpen={false}
             onClose={() => {}}
-            onSubmit={() => {}}
+            onSubmit={() => Promise.resolve()}
             isProcessing={false}
             mode="add"
           />
