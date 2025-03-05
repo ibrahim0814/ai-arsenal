@@ -34,12 +34,40 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Preconnect to API endpoints to speed up data loading */}
+        <link rel="preconnect" href="/api" />
+        
+        {/* Preload critical CSS */}
+        <link 
+          rel="preload" 
+          href="/globals.css" 
+          as="style" 
+        />
+        
+        {/* Preload critical JavaScript */}
+        <link 
+          rel="modulepreload" 
+          href="/_next/static/chunks/pages/app.js" 
+        />
+      </head>
       <body className={`${inter.className} bg-gray-100 dark:bg-gray-950`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
           <Toaster />
-          <SpeedInsights />
-          <Analytics />
+          {/* Defer non-critical analytics */}
+          <script 
+            dangerouslySetInnerHTML={{
+              __html: `
+                setTimeout(() => {
+                  const analyticsScript = document.createElement('script');
+                  analyticsScript.src = '/_vercel/insights/script.js';
+                  analyticsScript.defer = true;
+                  document.body.appendChild(analyticsScript);
+                }, 1000);
+              `
+            }} 
+          />
         </ThemeProvider>
       </body>
     </html>

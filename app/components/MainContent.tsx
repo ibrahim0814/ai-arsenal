@@ -83,9 +83,7 @@ export function MainContent({
   promptsLoading = false,
   mediaLoading = false,
 }: MainContentProps) {
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+  // We don't block rendering the tabs UI even if data is loading
 
   return (
     <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
@@ -144,57 +142,57 @@ export function MainContent({
         </div>
 
         <TabsContent value="tools">
-          {toolsLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <Suspense fallback={<LoadingSpinner />}>
-              <ToolsContent
-                tools={tools}
-                searchResults={searchResults}
-                isSearching={isSearching}
-                onSearch={onSearch}
-                onEdit={onEditTool}
-                onDelete={onDeleteTool}
-                isAdmin={isAdmin}
-              />
-            </Suspense>
-          )}
+          <Suspense fallback={
+            <div className="min-h-[200px] flex items-center justify-center">
+              <LoadingSpinner size="sm" />
+            </div>
+          }>
+            <ToolsContent
+              tools={tools}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onSearch={onSearch}
+              onEdit={onEditTool}
+              onDelete={onDeleteTool}
+              isAdmin={isAdmin}
+            />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="prompts">
-          {promptsLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <Suspense fallback={<LoadingSpinner />}>
-              <PromptsContent
-                prompts={prompts}
-                isAdmin={isAdmin}
-                processingIds={processingIds}
-                onEdit={onEditPrompt}
-                onDelete={onDeletePrompt}
-              />
-            </Suspense>
-          )}
+          <Suspense fallback={
+            <div className="min-h-[200px] flex items-center justify-center">
+              <LoadingSpinner size="sm" />
+            </div>
+          }>
+            <PromptsContent
+              prompts={prompts}
+              isAdmin={isAdmin}
+              processingIds={processingIds}
+              onEdit={onEditPrompt}
+              onDelete={onDeletePrompt}
+            />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="media">
-          {mediaLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <Suspense fallback={<LoadingSpinner />}>
-              <MediaTabs
-                mediaItems={mediaItems}
-                notes={notes}
-                isAdmin={isAdmin}
-                user={user}
-                onEditMedia={onEditMedia}
-                onDeleteMedia={onDeleteMedia}
-                onEditNote={onEditNote}
-                onDeleteNote={onDeleteNote}
-                groupContentByDate={groupContentByDate}
-              />
-            </Suspense>
-          )}
+          <Suspense fallback={
+            <div className="min-h-[200px] flex items-center justify-center">
+              <LoadingSpinner size="sm" />
+            </div>
+          }>
+            <MediaTabs
+              mediaItems={mediaItems}
+              notes={notes}
+              isAdmin={isAdmin}
+              user={user}
+              onEditMedia={onEditMedia}
+              onDeleteMedia={onDeleteMedia}
+              onEditNote={onEditNote}
+              onDeleteNote={onDeleteNote}
+              groupContentByDate={groupContentByDate}
+            />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

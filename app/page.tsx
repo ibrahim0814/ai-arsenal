@@ -167,50 +167,108 @@ export default function Home() {
     }
   }
 
-  // Initial data load
+  // Initial data load with optimized loading sequence
   useEffect(() => {
     const initializeApp = async () => {
-      setLoading(true);
+      // Start with loading false to show UI shell immediately
+      setLoading(false);
+      
+      // First check for cached data to immediately populate UI
+      const cachedTools = localStorage.getItem('cached_tools');
+      const cachedPrompts = localStorage.getItem('cached_prompts');
+      const cachedMedia = localStorage.getItem('cached_media');
+      const cacheTimestamp = localStorage.getItem('cache_timestamp');
+      
+      // Use cached data if it exists and is less than 5 minutes old
+      const isCacheValid = cacheTimestamp && 
+        (Date.now() - parseInt(cacheTimestamp)) < 5 * 60 * 1000;
+      
+      if (isCacheValid) {
+        if (cachedTools) setTools(JSON.parse(cachedTools));
+        if (cachedPrompts) setPrompts(JSON.parse(cachedPrompts));
+        if (cachedMedia) setMediaItems(JSON.parse(cachedMedia));
+      }
+      
       try {
-        // First load tools since they're shown first on mobile
-        const toolsResponse = await fetch("/api/tools");
-        if (toolsResponse.ok) {
-          const toolsData = await toolsResponse.json();
-          setTools(toolsData);
-          setLoading(false); // Stop loading spinner after tools are loaded
-
-          // Load other data in the background
-          Promise.all([fetch("/api/prompts"), fetch("/api/media")])
-            .then(async ([promptsResponse, mediaResponse]) => {
-              if (promptsResponse.ok) {
-                const promptsData = await promptsResponse.json();
-                setPrompts(promptsData);
-              }
-              if (mediaResponse.ok) {
-                const mediaData = await mediaResponse.json();
-                setMediaItems(mediaData);
-              }
-            })
-            .catch((error) => {
-              console.error("Error loading background data:", error);
+        // Load all data in parallel but handle them as they complete
+        const toolsPromise = fetch("/api/tools");
+        const promptsPromise = fetch("/api/prompts");
+        const mediaPromise = fetch("/api/media");
+        const userPromise = getCurrentUser();
+        
+        // Handle tools response as soon as it arrives (highest priority)
+        toolsPromise
+          .then(response => {
+            if (response.ok) return response.json();
+            throw new Error("Failed to fetch tools");
+          })
+          .then(toolsData => {
+            setTools(toolsData);
+            // Update cache
+            localStorage.setItem('cached_tools', JSON.stringify(toolsData));
+            localStorage.setItem('cache_timestamp', Date.now().toString());
+          })
+          .catch(error => {
+            console.error("Error fetching tools:", error);
+            // Only show toast if we don't have cached data
+            if (!cachedTools) {
               toast({
-                title: "Some data failed to load",
-                description: "Try refreshing the page.",
+                title: "Error",
+                description: "Failed to load tools. Using cached data if available.",
                 variant: "destructive",
               });
-            });
+            }
+          });
 
-          // Check user and load notes in parallel
-          const currentUser = await getCurrentUser();
-          setUser(currentUser);
-          if (currentUser) {
-            const adminStatus = await isAdmin(currentUser);
-            setIsUserAdmin(adminStatus);
-            await fetchNotes();
-          }
-        } else {
-          throw new Error("Failed to fetch tools");
-        }
+        // Handle user auth in parallel (needed for notes)
+        userPromise
+          .then(currentUser => {
+            setUser(currentUser);
+            if (currentUser) {
+              // Once we have user, check admin status and fetch notes
+              return Promise.all([
+                isAdmin(currentUser),
+                fetchNotes()
+              ]);
+            }
+          })
+          .then(results => {
+            if (results) {
+              const [adminStatus] = results;
+              setIsUserAdmin(adminStatus);
+            }
+          })
+          .catch(error => {
+            console.error("Error checking user:", error);
+          });
+
+        // Handle prompts and media responses (lower priority)
+        promptsPromise
+          .then(response => {
+            if (response.ok) return response.json();
+            throw new Error("Failed to fetch prompts");
+          })
+          .then(promptsData => {
+            setPrompts(promptsData);
+            localStorage.setItem('cached_prompts', JSON.stringify(promptsData));
+          })
+          .catch(error => {
+            console.error("Error fetching prompts:", error);
+          });
+
+        mediaPromise
+          .then(response => {
+            if (response.ok) return response.json();
+            throw new Error("Failed to fetch media");
+          })
+          .then(mediaData => {
+            setMediaItems(mediaData);
+            localStorage.setItem('cached_media', JSON.stringify(mediaData));
+          })
+          .catch(error => {
+            console.error("Error fetching media:", error);
+          });
+        
       } catch (error) {
         console.error("Error in initial load:", error);
         toast({
@@ -218,8 +276,6 @@ export default function Home() {
           description: "Failed to load data. Please try refreshing the page.",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -811,13 +867,8 @@ export default function Home() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  // We don't show a full-page loading spinner anymore
+  // Instead, we render the UI shell immediately and show spinners for content areas
 
   if (error) {
     return (
@@ -914,148 +965,165 @@ export default function Home() {
         )}
       </div>
 
-      <Suspense fallback={null}>
-        {isLoginModalOpen && (
-          <LoginModal
-            open={isLoginModalOpen}
-            onClose={() => setIsLoginModalOpen(false)}
-            onLoginSuccess={async () => {
-              setContentLoading(true);
-              try {
-                const currentUser = await getCurrentUser();
-                setUser(currentUser);
-                if (currentUser) {
-                  const adminStatus = await isAdmin(currentUser);
-                  setIsUserAdmin(adminStatus);
-                  await fetchNotes();
-                }
-              } finally {
-                setContentLoading(false);
-                setIsLoginModalOpen(false);
-              }
-            }}
-          />
-        )}
-
-        {isAddModalOpen && targetTab === "tools" && (
+      {/* Preload critical action modals */}
+      <div style={{ display: 'none' }}>
+        <Suspense fallback={null}>
           <AddToolModal
-            open={isAddModalOpen}
-            onClose={() => setIsAddModalOpen(false)}
-            onAdd={handleAddTool}
+            open={false}
+            onClose={() => {}}
+            onAdd={() => Promise.resolve()}
           />
-        )}
-
-        {isAddModalOpen && targetTab === "prompts" && (
-          <AddEditPromptModal
-            isOpen={isAddModalOpen}
-            onClose={() => setIsAddModalOpen(false)}
-            onSubmit={handleAddPrompt}
-            mode="add"
-            isProcessing={isProcessing}
-          />
-        )}
-
-        {isAddModalOpen && targetTab === "media" && (
-          <AddMediaModal
-            isOpen={isAddModalOpen}
-            onClose={() => setIsAddModalOpen(false)}
-            onSubmit={handleAddMediaItem}
-            initialData={null}
-            mode="add"
-            isProcessing={isProcessing}
-          />
-        )}
-
-        {selectedPrompt && isEditModalOpen && (
-          <AddEditPromptModal
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setSelectedPrompt(null);
-            }}
-            onSubmit={handleEditPrompt}
-            mode="edit"
-            initialData={selectedPrompt}
-            isProcessing={isProcessing}
-          />
-        )}
-
-        {selectedPrompt && isDeleteModalOpen && (
-          <DeletePromptModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => {
-              setIsDeleteModalOpen(false);
-              setSelectedPrompt(null);
-            }}
-            onDelete={handleDeletePrompt}
-            prompt={selectedPrompt}
-            isProcessing={processingIds[selectedPrompt.id]}
-          />
-        )}
-
-        {selectedMediaItem && isMediaModalOpen && (
-          <AddMediaModal
-            isOpen={isMediaModalOpen}
-            onClose={() => {
-              setIsMediaModalOpen(false);
-              setSelectedMediaItem(null);
-            }}
-            onSubmit={handleEditMediaItem}
-            initialData={selectedMediaItem}
-            mode="edit"
-            isProcessing={isProcessing}
-          />
-        )}
-
-        {selectedMediaItem && isDeleteMediaModalOpen && (
-          <DeleteMediaModal
-            isOpen={isDeleteMediaModalOpen}
-            onClose={() => {
-              setIsDeleteMediaModalOpen(false);
-              setSelectedMediaItem(null);
-            }}
-            onDelete={handleDeleteMediaItem}
-            item={selectedMediaItem}
-            isProcessing={processingIds[selectedMediaItem.id]}
-          />
-        )}
-
-        {isAddNoteModalOpen && (
           <AddEditNoteModal
-            isOpen={isAddNoteModalOpen}
-            onClose={() => setIsAddNoteModalOpen(false)}
-            onSubmit={handleAddNote}
-            isProcessing={isProcessing}
+            isOpen={false}
+            onClose={() => {}}
+            onSubmit={() => {}}
+            isProcessing={false}
             mode="add"
           />
-        )}
+        </Suspense>
+      </div>
 
-        {selectedNote && isEditNoteModalOpen && (
-          <AddEditNoteModal
-            isOpen={isEditNoteModalOpen}
-            onClose={() => {
-              setIsEditNoteModalOpen(false);
-              setSelectedNote(null);
-            }}
-            onSubmit={handleEditNote}
-            initialContent={selectedNote.content}
-            isProcessing={processingIds[selectedNote.id]}
-            mode="edit"
-          />
-        )}
+      {/* Render modals dynamically when needed */}
+      {isLoginModalOpen && (
+        <LoginModal
+          open={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          onLoginSuccess={async () => {
+            setContentLoading(true);
+            try {
+              const currentUser = await getCurrentUser();
+              setUser(currentUser);
+              if (currentUser) {
+                const adminStatus = await isAdmin(currentUser);
+                setIsUserAdmin(adminStatus);
+                await fetchNotes();
+              }
+            } finally {
+              setContentLoading(false);
+              setIsLoginModalOpen(false);
+            }
+          }}
+        />
+      )}
 
-        {selectedNote && isDeleteNoteModalOpen && (
-          <DeleteNoteModal
-            isOpen={isDeleteNoteModalOpen}
-            onClose={() => {
-              setIsDeleteNoteModalOpen(false);
-              setSelectedNote(null);
-            }}
-            onDelete={handleDeleteNote}
-            isProcessing={processingIds[selectedNote.id]}
-          />
-        )}
-      </Suspense>
+      {isAddModalOpen && targetTab === "tools" && (
+        <AddToolModal
+          open={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={handleAddTool}
+        />
+      )}
+
+      {isAddModalOpen && targetTab === "prompts" && (
+        <AddEditPromptModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAddPrompt}
+          mode="add"
+          isProcessing={isProcessing}
+        />
+      )}
+
+      {isAddModalOpen && targetTab === "media" && (
+        <AddMediaModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAddMediaItem}
+          initialData={null}
+          mode="add"
+          isProcessing={isProcessing}
+        />
+      )}
+
+      {selectedPrompt && isEditModalOpen && (
+        <AddEditPromptModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedPrompt(null);
+          }}
+          onSubmit={handleEditPrompt}
+          mode="edit"
+          initialData={selectedPrompt}
+          isProcessing={isProcessing}
+        />
+      )}
+
+      {selectedPrompt && isDeleteModalOpen && (
+        <DeletePromptModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setSelectedPrompt(null);
+          }}
+          onDelete={handleDeletePrompt}
+          prompt={selectedPrompt}
+          isProcessing={processingIds[selectedPrompt.id]}
+        />
+      )}
+
+      {selectedMediaItem && isMediaModalOpen && (
+        <AddMediaModal
+          isOpen={isMediaModalOpen}
+          onClose={() => {
+            setIsMediaModalOpen(false);
+            setSelectedMediaItem(null);
+          }}
+          onSubmit={handleEditMediaItem}
+          initialData={selectedMediaItem}
+          mode="edit"
+          isProcessing={isProcessing}
+        />
+      )}
+
+      {selectedMediaItem && isDeleteMediaModalOpen && (
+        <DeleteMediaModal
+          isOpen={isDeleteMediaModalOpen}
+          onClose={() => {
+            setIsDeleteMediaModalOpen(false);
+            setSelectedMediaItem(null);
+          }}
+          onDelete={handleDeleteMediaItem}
+          item={selectedMediaItem}
+          isProcessing={processingIds[selectedMediaItem.id]}
+        />
+      )}
+
+      {isAddNoteModalOpen && (
+        <AddEditNoteModal
+          isOpen={isAddNoteModalOpen}
+          onClose={() => setIsAddNoteModalOpen(false)}
+          onSubmit={handleAddNote}
+          isProcessing={isProcessing}
+          mode="add"
+        />
+      )}
+
+      {selectedNote && isEditNoteModalOpen && (
+        <AddEditNoteModal
+          isOpen={isEditNoteModalOpen}
+          onClose={() => {
+            setIsEditNoteModalOpen(false);
+            setSelectedNote(null);
+          }}
+          onSubmit={handleEditNote}
+          initialContent={selectedNote.content}
+          isProcessing={processingIds[selectedNote.id]}
+          mode="edit"
+        />
+      )}
+
+      {selectedNote && isDeleteNoteModalOpen && (
+        <DeleteNoteModal
+          isOpen={isDeleteNoteModalOpen}
+          onClose={() => {
+            setIsDeleteNoteModalOpen(false);
+            setSelectedNote(null);
+          }}
+          onDelete={handleDeleteNote}
+          isProcessing={processingIds[selectedNote.id]}
+        />
+      )}
     </div>
   );
 }
