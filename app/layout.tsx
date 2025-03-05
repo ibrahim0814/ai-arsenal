@@ -50,6 +50,29 @@ export default function RootLayout({
           rel="modulepreload" 
           href="/_next/static/chunks/pages/app.js" 
         />
+
+        {/* Initialize auth cache check early */}
+        <script 
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Early auth check to avoid waiting for component mount
+              try {
+                const cachedUser = sessionStorage.getItem('arsenal_auth_cache');
+                const cachedAdmin = sessionStorage.getItem('arsenal_admin_status');
+                const expiry = sessionStorage.getItem('arsenal_auth_expiry');
+                
+                if (cachedUser && expiry && Date.now() < parseInt(expiry)) {
+                  window.__ARSENAL_CACHED_AUTH = {
+                    user: JSON.parse(cachedUser),
+                    isAdmin: cachedAdmin ? JSON.parse(cachedAdmin) : false
+                  };
+                }
+              } catch (e) {
+                console.warn('Failed to check auth cache during initial load', e);
+              }
+            `
+          }}
+        />
       </head>
       <body className={`${inter.className} bg-gray-100 dark:bg-gray-950`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

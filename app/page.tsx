@@ -167,11 +167,27 @@ export default function Home() {
     }
   }
 
-  // Initial data load with optimized loading sequence
+  // Initial data load with optimized loading sequence and auth caching
   useEffect(() => {
     const initializeApp = async () => {
       // Start with loading false to show UI shell immediately
       setLoading(false);
+      
+      // Check for early auth data from the script in layout.tsx
+      try {
+        // @ts-ignore - This is set by the script in layout.tsx
+        const cachedAuth = window.__ARSENAL_CACHED_AUTH;
+        if (cachedAuth) {
+          setUser(cachedAuth.user);
+          setIsUserAdmin(cachedAuth.isAdmin);
+          // If we have user auth already, immediately fetch notes
+          if (cachedAuth.user) {
+            fetchNotes().catch(err => console.error("Error prefetching notes:", err));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to access cached auth data', e);
+      }
       
       // First check for cached data to immediately populate UI
       const cachedTools = localStorage.getItem('cached_tools');
@@ -194,7 +210,10 @@ export default function Home() {
         const toolsPromise = fetch("/api/tools");
         const promptsPromise = fetch("/api/prompts");
         const mediaPromise = fetch("/api/media");
-        const userPromise = getCurrentUser();
+        
+        // Only fetch user if we don't already have it from cache
+        // @ts-ignore - This is set by the script in layout.tsx
+        const userPromise = !window.__ARSENAL_CACHED_AUTH ? getCurrentUser() : Promise.resolve(null);
         
         // Handle tools response as soon as it arrives (highest priority)
         toolsPromise
@@ -220,27 +239,30 @@ export default function Home() {
             }
           });
 
-        // Handle user auth in parallel (needed for notes)
-        userPromise
-          .then(currentUser => {
-            setUser(currentUser);
-            if (currentUser) {
-              // Once we have user, check admin status and fetch notes
-              return Promise.all([
-                isAdmin(currentUser),
-                fetchNotes()
-              ]);
-            }
-          })
-          .then(results => {
-            if (results) {
-              const [adminStatus] = results;
-              setIsUserAdmin(adminStatus);
-            }
-          })
-          .catch(error => {
-            console.error("Error checking user:", error);
-          });
+        // Handle user auth in parallel only if we didn't get it from cache
+        // @ts-ignore - This is set by the script in layout.tsx
+        if (!window.__ARSENAL_CACHED_AUTH) {
+          userPromise
+            .then(currentUser => {
+              if (currentUser) {
+                setUser(currentUser);
+                // Once we have user, check admin status and fetch notes
+                return Promise.all([
+                  isAdmin(currentUser),
+                  fetchNotes()
+                ]);
+              }
+            })
+            .then(results => {
+              if (results) {
+                const [adminStatus] = results;
+                setIsUserAdmin(adminStatus);
+              }
+            })
+            .catch(error => {
+              console.error("Error checking user:", error);
+            });
+        }
 
         // Handle prompts and media responses (lower priority)
         promptsPromise
@@ -282,12 +304,14 @@ export default function Home() {
     initializeApp();
   }, []);
 
-  // Check authentication state on mount
+  // Check authentication state on mount - optimized to use cached data
   useEffect(() => {
     const checkAuthState = async () => {
+      // We don't need to show loading state here since auth check will be fast with caching
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       if (currentUser) {
+        // isAdmin is now also cached, so this call will be fast
         const adminStatus = await isAdmin(currentUser);
         setIsUserAdmin(adminStatus);
       }
