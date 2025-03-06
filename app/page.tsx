@@ -15,7 +15,6 @@ import { Header } from "./components/Header";
 import { MainContent } from "./components/MainContent";
 import { NotesSidebar } from "./components/NotesSidebar";
 import { toPacificDate } from "@/utils/date";
-import { LoadingSpinner } from "./components/LoadingSpinner";
 
 // Lazy load modals and other non-critical components
 const LoginModal = lazy(() =>
@@ -63,6 +62,7 @@ export default function Home() {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -170,9 +170,10 @@ export default function Home() {
   // Initial data load with optimized loading sequence and auth caching
   useEffect(() => {
     const initializeApp = async () => {
-      // Start with loading false to show UI shell immediately
-      setLoading(false);
-      
+      // Always start with loading true, even when logged out
+      setLoading(true);
+      let isUserAuthenticating = false;
+
       // Check for early auth data from the script in layout.tsx
       try {
         // @ts-ignore - This is set by the script in layout.tsx
@@ -182,115 +183,133 @@ export default function Home() {
           setIsUserAdmin(cachedAuth.isAdmin);
           // If we have user auth already, immediately fetch notes
           if (cachedAuth.user) {
-            fetchNotes().catch(err => console.error("Error prefetching notes:", err));
+            isUserAuthenticating = true; // We have a user and are loading data
+            setIsAuthenticating(true); // Set authenticating flag when verifying cached credentials
+            fetchNotes().catch((err) =>
+              console.error("Error prefetching notes:", err)
+            );
           }
         }
       } catch (e) {
-        console.warn('Failed to access cached auth data', e);
+        console.warn("Failed to access cached auth data", e);
       }
-      
+
       // First check for cached data to immediately populate UI
-      const cachedTools = localStorage.getItem('cached_tools');
-      const cachedPrompts = localStorage.getItem('cached_prompts');
-      const cachedMedia = localStorage.getItem('cached_media');
-      const cacheTimestamp = localStorage.getItem('cache_timestamp');
-      
+      const cachedTools = localStorage.getItem("cached_tools");
+      const cachedPrompts = localStorage.getItem("cached_prompts");
+      const cachedMedia = localStorage.getItem("cached_media");
+      const cacheTimestamp = localStorage.getItem("cache_timestamp");
+
       // Use cached data if it exists and is less than 5 minutes old
-      const isCacheValid = cacheTimestamp && 
-        (Date.now() - parseInt(cacheTimestamp)) < 5 * 60 * 1000;
-      
+      const isCacheValid =
+        cacheTimestamp && Date.now() - parseInt(cacheTimestamp) < 5 * 60 * 1000;
+
       if (isCacheValid) {
         if (cachedTools) setTools(JSON.parse(cachedTools));
         if (cachedPrompts) setPrompts(JSON.parse(cachedPrompts));
         if (cachedMedia) setMediaItems(JSON.parse(cachedMedia));
       }
-      
+
       try {
         // Load all data in parallel but handle them as they complete
         const toolsPromise = fetch("/api/tools");
         const promptsPromise = fetch("/api/prompts");
         const mediaPromise = fetch("/api/media");
-        
+
         // Only fetch user if we don't already have it from cache
         // @ts-ignore - This is set by the script in layout.tsx
-        const userPromise = !window.__ARSENAL_CACHED_AUTH ? getCurrentUser() : Promise.resolve(null);
-        
+        const userPromise = !window.__ARSENAL_CACHED_AUTH
+          ? getCurrentUser()
+          : Promise.resolve(null);
+
         // Handle tools response as soon as it arrives (highest priority)
         toolsPromise
-          .then(response => {
+          .then((response) => {
             if (response.ok) return response.json();
             throw new Error("Failed to fetch tools");
           })
-          .then(toolsData => {
+          .then((toolsData) => {
             setTools(toolsData);
             // Update cache
-            localStorage.setItem('cached_tools', JSON.stringify(toolsData));
-            localStorage.setItem('cache_timestamp', Date.now().toString());
+            localStorage.setItem("cached_tools", JSON.stringify(toolsData));
+            localStorage.setItem("cache_timestamp", Date.now().toString());
+
+            // Clear loading state once we have data
+            setLoading(false);
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("Error fetching tools:", error);
             // Only show toast if we don't have cached data
             if (!cachedTools) {
               toast({
                 title: "Error",
-                description: "Failed to load tools. Using cached data if available.",
+                description:
+                  "Failed to load tools. Using cached data if available.",
                 variant: "destructive",
               });
             }
+            // Even on error, clear loading state
+            setLoading(false);
           });
 
         // Handle user auth in parallel only if we didn't get it from cache
         // @ts-ignore - This is set by the script in layout.tsx
         if (!window.__ARSENAL_CACHED_AUTH) {
           userPromise
-            .then(currentUser => {
+            .then((currentUser) => {
               if (currentUser) {
                 setUser(currentUser);
                 // Once we have user, check admin status and fetch notes
-                return Promise.all([
-                  isAdmin(currentUser),
-                  fetchNotes()
-                ]);
+                return Promise.all([isAdmin(currentUser), fetchNotes()]);
               }
+              return null;
             })
-            .then(results => {
+            .then((results) => {
               if (results) {
                 const [adminStatus] = results;
                 setIsUserAdmin(adminStatus);
               }
+              // Remove artificial delay to make skeleton disappear immediately
+              setLoading(false);
+              setIsAuthenticating(false); // Clear authenticating flag when done
             })
-            .catch(error => {
+            .catch((error) => {
               console.error("Error checking user:", error);
+              setLoading(false);
+              setIsAuthenticating(false); // Clear authenticating flag on error
             });
+        } else {
+          // Remove artificial delay to make skeleton disappear immediately
+          setLoading(false);
+          setIsAuthenticating(false); // Clear authenticating flag when not logged in
         }
 
         // Handle prompts and media responses (lower priority)
         promptsPromise
-          .then(response => {
+          .then((response) => {
             if (response.ok) return response.json();
             throw new Error("Failed to fetch prompts");
           })
-          .then(promptsData => {
+          .then((promptsData) => {
             setPrompts(promptsData);
-            localStorage.setItem('cached_prompts', JSON.stringify(promptsData));
+            localStorage.setItem("cached_prompts", JSON.stringify(promptsData));
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("Error fetching prompts:", error);
           });
 
         mediaPromise
-          .then(response => {
+          .then((response) => {
             if (response.ok) return response.json();
             throw new Error("Failed to fetch media");
           })
-          .then(mediaData => {
+          .then((mediaData) => {
             setMediaItems(mediaData);
-            localStorage.setItem('cached_media', JSON.stringify(mediaData));
+            localStorage.setItem("cached_media", JSON.stringify(mediaData));
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("Error fetching media:", error);
           });
-        
       } catch (error) {
         console.error("Error in initial load:", error);
         toast({
@@ -320,14 +339,21 @@ export default function Home() {
   }, []);
 
   async function checkUser() {
-    const currentUser = await getCurrentUser();
-    setUser(currentUser);
-    if (currentUser) {
-      const adminStatus = await isAdmin(currentUser);
-      setIsUserAdmin(adminStatus);
-      await fetchNotes();
-    } else {
-      setNotes([]);
+    setLoading(true); // Set loading state during auth check
+    setIsAuthenticating(true); // Set authenticating flag during credential verification
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      if (currentUser) {
+        const adminStatus = await isAdmin(currentUser);
+        setIsUserAdmin(adminStatus);
+        await fetchNotes();
+      } else {
+        setNotes([]);
+      }
+    } finally {
+      setLoading(false); // Clear loading state
+      setIsAuthenticating(false); // Clear authenticating flag when verification completes
     }
   }
 
@@ -914,6 +940,7 @@ export default function Home() {
           setIsAddModalOpen(true);
         }}
         onOpenAddNote={() => setIsAddNoteModalOpen(true)}
+        isLoading={loading || isAuthenticating}
       />
 
       <div className="flex gap-8 mt-8">
@@ -969,7 +996,8 @@ export default function Home() {
           mediaLoading={loading}
         />
 
-        {user && (
+        {/* Always render notes sidebar when user is authenticated or loading is happening */}
+        {(user || loading) && (
           <NotesSidebar
             notes={notes}
             isAdmin={isUserAdmin}
@@ -984,13 +1012,13 @@ export default function Home() {
                 setIsDeleteNoteModalOpen(true);
               }
             }}
-            isLoading={loading || contentLoading || notesLoading}
+            isLoading={notesLoading || isAuthenticating}
           />
         )}
       </div>
 
       {/* Preload critical action modals */}
-      <div style={{ display: 'none' }}>
+      <div style={{ display: "none" }}>
         <Suspense fallback={null}>
           <AddToolModal
             open={false}
@@ -1013,7 +1041,8 @@ export default function Home() {
           open={isLoginModalOpen}
           onClose={() => setIsLoginModalOpen(false)}
           onLoginSuccess={async () => {
-            setContentLoading(true);
+            setLoading(true); // Show skeleton loaders during auth
+            setIsAuthenticating(true); // Set authenticating flag when login attempt starts
             try {
               const currentUser = await getCurrentUser();
               setUser(currentUser);
@@ -1023,7 +1052,8 @@ export default function Home() {
                 await fetchNotes();
               }
             } finally {
-              setContentLoading(false);
+              setLoading(false);
+              setIsAuthenticating(false); // Clear authenticating flag when login completes
               setIsLoginModalOpen(false);
             }
           }}

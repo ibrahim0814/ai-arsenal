@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wrench, FileText, Newspaper } from "lucide-react";
 import { Tool, Prompt, MediaItem, Note, ContentItem } from "@/types";
 import { ToolsSearch } from "./tools/ToolsSearch";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { SkeletonLoader } from "./SkeletonLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy load non-critical components
 const ToolsContent = lazy(() =>
@@ -17,6 +18,54 @@ const PromptsContent = lazy(() =>
 const MediaTabs = lazy(() =>
   import("./media/MediaTabs").then((mod) => ({ default: mod.MediaTabs }))
 );
+const TabsNav = lazy(() =>
+  import("./TabsNav").then((mod) => ({ default: mod.TabsNav }))
+);
+
+// Create a new combined component for TabsNav and SearchBar
+const TabsHeader = lazy(() => {
+  return Promise.resolve({
+    default: ({
+      tools,
+      prompts,
+      mediaItems,
+      notes,
+      user,
+      activeTab,
+      onSearch,
+    }: {
+      tools: Tool[];
+      prompts: Prompt[];
+      mediaItems: MediaItem[];
+      notes: Note[];
+      user: any;
+      activeTab: string;
+      onSearch: (query: string) => void;
+    }) => (
+      <>
+        <div className="flex justify-between items-center">
+          <TabsNav
+            tools={tools}
+            prompts={prompts}
+            mediaItems={mediaItems}
+            notes={notes}
+            user={user}
+          />
+          {activeTab === "tools" && (
+            <div className="hidden md:block w-[300px]">
+              <ToolsSearch onSearch={onSearch} />
+            </div>
+          )}
+        </div>
+        {activeTab === "tools" && (
+          <div className="md:hidden mt-1">
+            <ToolsSearch onSearch={onSearch} />
+          </div>
+        )}
+      </>
+    ),
+  });
+});
 
 interface MainContentProps {
   activeTab: string;
@@ -83,70 +132,73 @@ export function MainContent({
   promptsLoading = false,
   mediaLoading = false,
 }: MainContentProps) {
-  // We don't block rendering the tabs UI even if data is loading
+  // Determine if we should show skeletons
+  const showSkeletons = isLoading;
 
+  // Completely separate loading state from loaded state
+  if (showSkeletons) {
+    return (
+      <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
+        {/* Only show loading spinners during skeleton state */}
+        {activeTab === "tools" && (
+          <SkeletonLoader
+            type="tools"
+            isLoggedIn={!!user}
+            isAuthenticating={true}
+          />
+        )}
+
+        {activeTab === "prompts" && (
+          <SkeletonLoader
+            type="prompts"
+            isLoggedIn={!!user}
+            isAuthenticating={true}
+          />
+        )}
+
+        {activeTab === "media" && (
+          <SkeletonLoader
+            type="media"
+            isLoggedIn={!!user}
+            isAuthenticating={true}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Only render tabs and content when fully loaded
   return (
     <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
       <Tabs value={activeTab} onValueChange={onTabChange}>
-        <div className="flex flex-col gap-4 mb-4">
-          <div className="flex justify-between items-center">
-            <TabsList className="w-full sm:w-fit">
-              <TabsTrigger
-                value="tools"
-                className="flex-1 sm:flex-initial min-w-[100px]"
-              >
-                <Wrench className="h-4 w-4 mr-2" />
-                Tools{" "}
-                {tools.length > 0 && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({tools.length})
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger
-                value="prompts"
-                className="flex-1 sm:flex-initial min-w-[100px]"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Prompts{" "}
-                {prompts.length > 0 && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({prompts.length})
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger
-                value="media"
-                className="flex-1 sm:flex-initial min-w-[100px]"
-              >
-                <Newspaper className="h-4 w-4 mr-2" />
-                Media{" "}
-                {(mediaItems.length > 0 || (user && notes.length > 0)) && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({mediaItems.length + (user ? notes.length : 0)})
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            {activeTab === "tools" && (
-              <div className="hidden md:block w-[300px]">
-                <ToolsSearch onSearch={onSearch} />
-              </div>
-            )}
-          </div>
-          {activeTab === "tools" && (
-            <div className="md:hidden">
-              <ToolsSearch onSearch={onSearch} />
-            </div>
-          )}
+        <div className="flex flex-col mb-3">
+          <Suspense
+            fallback={
+              <SkeletonLoader type="tabs-header" activeTab={activeTab} />
+            }
+          >
+            <TabsHeader
+              tools={tools}
+              prompts={prompts}
+              mediaItems={mediaItems}
+              notes={notes}
+              user={user}
+              activeTab={activeTab}
+              onSearch={onSearch}
+            />
+          </Suspense>
         </div>
 
         <TabsContent value="tools">
-          <Suspense fallback={
-            <div className="min-h-[200px] flex items-center justify-center">
-              <LoadingSpinner size="sm" />
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <SkeletonLoader
+                type="tools"
+                isLoggedIn={!!user}
+                isAuthenticating={true}
+              />
+            }
+          >
             <ToolsContent
               tools={tools}
               searchResults={searchResults}
@@ -160,11 +212,15 @@ export function MainContent({
         </TabsContent>
 
         <TabsContent value="prompts">
-          <Suspense fallback={
-            <div className="min-h-[200px] flex items-center justify-center">
-              <LoadingSpinner size="sm" />
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <SkeletonLoader
+                type="prompts"
+                isLoggedIn={!!user}
+                isAuthenticating={true}
+              />
+            }
+          >
             <PromptsContent
               prompts={prompts}
               isAdmin={isAdmin}
@@ -176,11 +232,15 @@ export function MainContent({
         </TabsContent>
 
         <TabsContent value="media">
-          <Suspense fallback={
-            <div className="min-h-[200px] flex items-center justify-center">
-              <LoadingSpinner size="sm" />
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <SkeletonLoader
+                type="media"
+                isLoggedIn={!!user}
+                isAuthenticating={true}
+              />
+            }
+          >
             <MediaTabs
               mediaItems={mediaItems}
               notes={notes}

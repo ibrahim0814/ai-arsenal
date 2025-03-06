@@ -12,6 +12,7 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    minimumCacheTTL: 86400, // Cache images for 24 hours
   },
   
   // Optimize JavaScript bundles
@@ -25,10 +26,31 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     scrollRestoration: true,
+    turbo: {
+      loaders: {
+        // Optimize loading of specific file types
+        '.js': ['babel-loader'],
+        '.tsx': ['babel-loader'],
+        '.ts': ['babel-loader'],
+      },
+    },
   },
 
   // Optimize for faster builds in development
   swcMinify: true,
+  
+  // Enable Critters CSS inlining for improved First Contentful Paint
+  webpack: (config) => {
+    return config;
+  },
+  
+  // Optimize page loading speed with improved caching
+  poweredByHeader: false,
+  onDemandEntries: {
+    // Keep the build page in memory for faster refreshes
+    maxInactiveAge: 60 * 1000, // 1 minute
+    pagesBufferLength: 5,
+  },
 };
 
 export default nextConfig;

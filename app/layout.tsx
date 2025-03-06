@@ -37,22 +37,15 @@ export default function RootLayout({
       <head>
         {/* Preconnect to API endpoints to speed up data loading */}
         <link rel="preconnect" href="/api" />
-        
+
         {/* Preload critical CSS */}
-        <link 
-          rel="preload" 
-          href="/globals.css" 
-          as="style" 
-        />
-        
+        <link rel="preload" href="/globals.css" as="style" />
+
         {/* Preload critical JavaScript */}
-        <link 
-          rel="modulepreload" 
-          href="/_next/static/chunks/pages/app.js" 
-        />
+        <link rel="modulepreload" href="/_next/static/chunks/pages/app.js" />
 
         {/* Initialize auth cache check early */}
-        <script 
+        <script
           dangerouslySetInnerHTML={{
             __html: `
               // Early auth check to avoid waiting for component mount
@@ -70,7 +63,7 @@ export default function RootLayout({
               } catch (e) {
                 console.warn('Failed to check auth cache during initial load', e);
               }
-            `
+            `,
           }}
         />
       </head>
@@ -79,7 +72,7 @@ export default function RootLayout({
           {children}
           <Toaster />
           {/* Defer non-critical analytics */}
-          <script 
+          <script
             dangerouslySetInnerHTML={{
               __html: `
                 setTimeout(() => {
@@ -88,8 +81,8 @@ export default function RootLayout({
                   analyticsScript.defer = true;
                   document.body.appendChild(analyticsScript);
                 }, 1000);
-              `
-            }} 
+              `,
+            }}
           />
         </ThemeProvider>
       </body>
