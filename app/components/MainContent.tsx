@@ -1,10 +1,8 @@
 import { Suspense, lazy } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wrench, FileText, Newspaper } from "lucide-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Tool, Prompt, MediaItem, Note, ContentItem } from "@/types";
 import { ToolsSearch } from "./tools/ToolsSearch";
 import { SkeletonLoader } from "./SkeletonLoader";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy load non-critical components
 const ToolsContent = lazy(() =>
@@ -141,13 +139,14 @@ export function MainContent({
   if (showSkeletons) {
     // If there's no user (logged out) and not authenticating, use full width
     // If there's a user or we're authenticating, use 70% width for large screens
-    const widthClass = user || isAuthenticating ? "w-full lg:w-[70%]" : "w-full";
-    
+    const widthClass =
+      user || isAuthenticating ? "w-full lg:w-[70%]" : "w-full";
+
     return (
       <div className={`${widthClass} mt-2`}>
         {/* Always show the tabs header skeleton first */}
         <SkeletonLoader type="tabs-header" activeTab={activeTab} />
-        
+
         {/* Then show the appropriate content skeleton */}
         {activeTab === "tools" && (
           <SkeletonLoader

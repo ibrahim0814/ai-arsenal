@@ -1,5 +1,3 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
 type SkeletonLoaderProps = {
   type?:
     | "tab"
@@ -216,7 +214,7 @@ export function SkeletonLoader({
       <div className="flex items-center gap-2 animate-pulse">
         {/* Theme toggle skeleton */}
         <div className="h-9 w-9 rounded-md bg-muted"></div>
-        
+
         {/* Admin buttons skeleton - optional based on isLoggedIn */}
         {isLoggedIn && (
           <>
@@ -230,14 +228,14 @@ export function SkeletonLoader({
             <div className="h-9 w-[80px] rounded-md bg-muted hidden sm:flex"></div>
           </>
         )}
-        
+
         {/* Auth buttons skeleton */}
         <div className="h-9 w-9 rounded-md bg-muted sm:hidden"></div>
         <div className="h-9 w-[90px] rounded-md bg-muted hidden sm:flex"></div>
       </div>
     );
   }
-  
+
   // Default content skeleton
   return (
     <div className={`space-y-4 ${wrapperClass}`}>
