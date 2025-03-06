@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Header } from "./components/Header";
 import { MainContent } from "./components/MainContent";
 import { NotesSidebar } from "./components/NotesSidebar";
+import { SkeletonLoader } from "./components/SkeletonLoader";
 import { toPacificDate } from "@/utils/date";
 
 // Lazy load modals and other non-critical components
@@ -181,10 +182,14 @@ export default function Home() {
         if (cachedAuth) {
           setUser(cachedAuth.user);
           setIsUserAdmin(cachedAuth.isAdmin);
-          // If we have user auth already, immediately fetch notes
+          
+          // If we have user auth already, show notes sidebar skeleton immediately
           if (cachedAuth.user) {
             isUserAuthenticating = true; // We have a user and are loading data
             setIsAuthenticating(true); // Set authenticating flag when verifying cached credentials
+            setNotesLoading(true); // Show notes loading state immediately 
+            
+            // Start notes fetch immediately
             fetchNotes().catch((err) =>
               console.error("Error prefetching notes:", err)
             );
@@ -326,6 +331,17 @@ export default function Home() {
   // Check authentication state on mount - optimized to use cached data
   useEffect(() => {
     const checkAuthState = async () => {
+      // Immediately show notes loading state if we have cached auth
+      try {
+        // @ts-ignore - This is set by the script in layout.tsx
+        if (window.__ARSENAL_CACHED_AUTH?.user) {
+          setNotesLoading(true);
+          setIsAuthenticating(true);
+        }
+      } catch (e) {
+        console.warn('Failed to check cached auth for notes loading', e);
+      }
+      
       // We don't need to show loading state here since auth check will be fast with caching
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -333,7 +349,14 @@ export default function Home() {
         // isAdmin is now also cached, so this call will be fast
         const adminStatus = await isAdmin(currentUser);
         setIsUserAdmin(adminStatus);
+        
+        // If we found a user but didn't already trigger notes loading, do it now
+        setNotesLoading(true);
+        await fetchNotes();
       }
+      
+      // Clear authenticating flag
+      setIsAuthenticating(false);
     };
     checkAuthState();
   }, []);
@@ -990,14 +1013,15 @@ export default function Home() {
             }
           }}
           groupContentByDate={groupContentByDate}
-          isLoading={loading}
-          toolsLoading={loading}
-          promptsLoading={loading}
-          mediaLoading={loading}
+          isLoading={loading || isAuthenticating}
+          toolsLoading={loading || isAuthenticating}
+          promptsLoading={loading || isAuthenticating}
+          mediaLoading={loading || isAuthenticating}
+          isAuthenticating={isAuthenticating}
         />
 
-        {/* Always render notes sidebar when user is authenticated or loading is happening */}
-        {(user || loading) && (
+        {/* Only render notes sidebar when user is authenticated or during authentication process */}
+        {(user || isAuthenticating) && (
           <NotesSidebar
             notes={notes}
             isAdmin={isUserAdmin}
@@ -1012,7 +1036,7 @@ export default function Home() {
                 setIsDeleteNoteModalOpen(true);
               }
             }}
-            isLoading={notesLoading || isAuthenticating}
+            isLoading={notesLoading || loading || isAuthenticating}
           />
         )}
       </div>
@@ -1043,6 +1067,8 @@ export default function Home() {
           onLoginSuccess={async () => {
             setLoading(true); // Show skeleton loaders during auth
             setIsAuthenticating(true); // Set authenticating flag when login attempt starts
+            setNotesLoading(true); // Show notes loading immediately
+            
             try {
               const currentUser = await getCurrentUser();
               setUser(currentUser);

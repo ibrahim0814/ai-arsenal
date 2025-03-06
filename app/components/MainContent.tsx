@@ -103,6 +103,7 @@ interface MainContentProps {
   toolsLoading?: boolean;
   promptsLoading?: boolean;
   mediaLoading?: boolean;
+  isAuthenticating?: boolean;
 }
 
 export function MainContent({
@@ -131,20 +132,28 @@ export function MainContent({
   toolsLoading = false,
   promptsLoading = false,
   mediaLoading = false,
+  isAuthenticating = false,
 }: MainContentProps) {
   // Determine if we should show skeletons
   const showSkeletons = isLoading;
 
   // Completely separate loading state from loaded state
   if (showSkeletons) {
+    // If there's no user (logged out) and not authenticating, use full width
+    // If there's a user or we're authenticating, use 70% width for large screens
+    const widthClass = user || isAuthenticating ? "w-full lg:w-[70%]" : "w-full";
+    
     return (
-      <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
-        {/* Only show loading spinners during skeleton state */}
+      <div className={`${widthClass} mt-2`}>
+        {/* Always show the tabs header skeleton first */}
+        <SkeletonLoader type="tabs-header" activeTab={activeTab} />
+        
+        {/* Then show the appropriate content skeleton */}
         {activeTab === "tools" && (
           <SkeletonLoader
             type="tools"
             isLoggedIn={!!user}
-            isAuthenticating={true}
+            isAuthenticating={isAuthenticating}
           />
         )}
 
@@ -152,7 +161,7 @@ export function MainContent({
           <SkeletonLoader
             type="prompts"
             isLoggedIn={!!user}
-            isAuthenticating={true}
+            isAuthenticating={isAuthenticating}
           />
         )}
 
@@ -160,7 +169,7 @@ export function MainContent({
           <SkeletonLoader
             type="media"
             isLoggedIn={!!user}
-            isAuthenticating={true}
+            isAuthenticating={isAuthenticating}
           />
         )}
       </div>
@@ -172,21 +181,15 @@ export function MainContent({
     <div className={`w-full ${user ? "lg:w-[70%]" : ""} mt-2`}>
       <Tabs value={activeTab} onValueChange={onTabChange}>
         <div className="flex flex-col mb-3">
-          <Suspense
-            fallback={
-              <SkeletonLoader type="tabs-header" activeTab={activeTab} />
-            }
-          >
-            <TabsHeader
-              tools={tools}
-              prompts={prompts}
-              mediaItems={mediaItems}
-              notes={notes}
-              user={user}
-              activeTab={activeTab}
-              onSearch={onSearch}
-            />
-          </Suspense>
+          <TabsHeader
+            tools={tools}
+            prompts={prompts}
+            mediaItems={mediaItems}
+            notes={notes}
+            user={user}
+            activeTab={activeTab}
+            onSearch={onSearch}
+          />
         </div>
 
         <TabsContent value="tools">

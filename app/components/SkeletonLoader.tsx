@@ -27,7 +27,7 @@ export function SkeletonLoader({
   // Combined tabs and search header skeleton
   if (type === "tabs-header") {
     return (
-      <div>
+      <div className="mb-4">
         <div className="flex justify-between items-center">
           <div className="flex gap-2 w-full sm:w-fit">
             <div className="flex-1 sm:flex-initial min-w-[100px] px-3 py-2 h-10 bg-muted rounded-md flex items-center animate-pulse">
